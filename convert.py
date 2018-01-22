@@ -7,20 +7,21 @@ import pandas as pd
 import numpy as np
 import re
 
+#trans to prosody tagged format
 def toProsody(inFile,outFile):
     f_in=open(file=inFile,encoding="utf-8")
     doc=""
     lines=f_in.readlines()
     for line in lines:
-        print("line:",line)
+        #print("line:",line)
         line=line.strip()
         line_list=line.split(sep="\t")
-        print(line_list)
+        #print(line_list)
         if(line_list[0]!=""):
             doc+=(line_list[0]+"#"+line_list[-1])
         else:
             doc+="\n"
-    print(doc)
+    #print(doc)
     f_out=open(file=outFile,mode="w",encoding="utf-8")
     f_out.write(doc)
     f_out.close()
@@ -30,36 +31,21 @@ def toProsody2(inFile,outFile):
     doc=""
     lines=f_in.readlines()
     for line in lines:
-        print("line:",line)
+        #print("line:",line)
         line=line.strip()
         line_list=line.split(sep="\t")
-        print(line_list)
+        #print(line_list)
         if(line_list[0]!=""):
             doc+=(line_list[0]+"#"+line_list[-2])
         else:
             doc+="\n"
-    print(doc)
+    #print(doc)
     f_out=open(file=outFile,mode="w",encoding="utf-8")
     f_out.write(doc)
     f_out.close()
 
-#去掉#0
-def removeZero(inFile,outFile):
-    doc=""
-    f=open(file=inFile,encoding="utf-8")
-    pattern=re.compile(pattern="#0")
-    lines=f.readlines()
-    for line in lines:
-        string=re.sub(pattern=pattern,repl="",string=line)
-        doc+=string
-    #print(doc)
-    f2=open(file=outFile,mode="w",encoding="utf-8")
-    f2.write(doc)
-    f2.close()
 
-
-
-
+'''
 #生成分词格式的文本,
 def toWords(inFile_train,inFile_valid,inFile_test):
     #---------------------------------------生成单词列表--------------------------------------------#
@@ -196,12 +182,14 @@ def toWords(inFile_train,inFile_valid,inFile_test):
     f_test_out.close()
 
 
+'''
+
 
 def toPOS(file):
     pass
 
 
-def merge(file1,file2):
+def merge(file1,file2,outFile):
     doc=""
     f1=open(file=file1,encoding="utf-8")
     lines_f1=f1.readlines()
@@ -211,8 +199,7 @@ def merge(file1,file2):
     lines_f2 = f2.readlines()
     for line_f2 in lines_f2:
         doc += line_f2
-
-    f3=open(file="prosody.txt",mode="w",encoding="utf-8")
+    f3=open(file=outFile,mode="w",encoding="utf-8")
     f3.write(doc)
     f3.close()
 
@@ -220,13 +207,20 @@ def merge(file1,file2):
 
 
 if __name__ =="__main__":
-    #toProsody(inFile="prosody_test_tag.utf8",outFile="prosody_test.txt")
-    #toProsody(inFile="prosody_train_tag.utf8", outFile="prosody_train.txt")
-    #removeZero(file="prosody_train.txt")
+    print("[1]-> Conver raw .utf-8 files to prosody tagged files")
+    toProsody(inFile="./data/raw/prosody_test_tag.utf8",outFile="./data/corpus/prosody_test.txt")
+    toProsody(inFile="./data/raw/prosody_train_tag.utf8", outFile="./data/corpus/prosody_train.txt")
+    toProsody2(inFile="./data/raw/prosody_valid_tag.rst", outFile="./data/corpus/prosody_valid.txt")
+
+
     #toWords(inFile="prosody_test_tag.utf8",outFile="word_test.txt")
     #toWords(inFile_train="prosody_train_tag.utf8",
     #        inFile_valid="prosody_valid_tag.rst",
     #        inFile_test="prosody_test_tag.utf8")
-    #toProsody2(inFile="prosody_valid_tag.rst", outFile="prosody_valid.txt")
-    #removeZero(inFile="prosody_valid.txt",outFile="prosody_valid_clean.txt")
-    merge(file1="prosody_train_clean.txt",file2="prosody_valid_clean.txt")
+
+    print("[2]->merge prosody_train and prosody_valid files")
+    merge(
+        file1="./data/corpus/prosody_train.txt",
+        file2="data/corpus/prosody_valid.txt",
+        outFile="data/corpus/prosody.txt"
+    )
