@@ -28,9 +28,9 @@ class BiLSTM_CBOW():
         self.layer_num = parameter.LAYER_NUM
         self.max_sentence_size = parameter.MAX_SENTENCE_SIZE
 
-        self.vocab_size = parameter.VOCAB_SIZE
+        #self.vocab_size = parameter.VOCAB_SIZE
         self.word_vocab_size=parameter.WORD_VOCAB_SIZE
-        self.embedding_size = parameter.EMBEDDING_SIZE
+        self.char_embedding_size = parameter.CHAR_EMBEDDING_SIZE
         self.word_embedding_size=parameter.WORD_EMBEDDING_SIZE
 
         self.batch_size = parameter.BATCH_SIZE
@@ -38,50 +38,12 @@ class BiLSTM_CBOW():
         self.lambda_pph=parameter.LAMBDA_PPH
         self.lambda_iph=parameter.LAMBDA_IPH
 
-        self.input_keep_prob=parameter.INPUT_KEEP_PROB
-        self.output_keep_prob=parameter.OUTPUT_KEEP_PROB
+        #self.input_keep_prob=parameter.INPUT_KEEP_PROB
+        #self.output_keep_prob=parameter.OUTPUT_KEEP_PROB
 
-    # encoder,传入是前向和后向的cell,还有inputs
-    # 输出是
-    def encoder(self, cell_forward, cell_backward, inputs, seq_length, scope_name):
-        outputs, states = tf.nn.bidirectional_dynamic_rnn(
-            cell_fw=cell_forward,
-            cell_bw=cell_backward,
-            inputs=inputs,
-            sequence_length=seq_length,
-            dtype=tf.float32,
-            scope=scope_name
-        )
-
-        outputs_forward = outputs[0]  # shape of h is [batch_size, max_time, cell_fw.output_size]
-        outputs_backward = outputs[1]  # shape of h is [batch_size, max_time, cell_bw.output_size]
-        states_forward = states[0]  # .c:[batch_size,num_units]   .h:[batch_size,num_units]
-        states_backward = states[1]
-        #concat final outputs [batch_size, max_time, cell_fw.output_size*2]
-        encoder_outputs = tf.concat(values=[outputs_forward, outputs_backward], axis=2)
-        #concat final states
-        state_h_concat=tf.concat(values=[states_forward.h,states_backward.h],axis=1,name="state_h_concat")
-        #print("state_h_concat:",state_h_concat)
-        state_c_concat=tf.concat(values=[states_forward.c,states_backward.c],axis=1,name="state_c_concat")
-        #print("state_c_concat:",state_c_concat)
-        encoder_states=rnn.LSTMStateTuple(c=state_c_concat,h=state_h_concat)
-        return encoder_outputs, encoder_states
-
-    def decoder(self, cell, initial_state, inputs, scope_name):
-        # outputs:[batch_size,time_steps,hidden_size*2]
-        outputs, states = tf.nn.dynamic_rnn(
-            cell=cell,
-            inputs=inputs,
-            initial_state=initial_state,
-            scope=scope_name
-        )
-        #[batch_size*time_steps,hidden_size*2]
-        decoder_outputs = tf.reshape(tensor=outputs, shape=(-1, self.hidden_units_num*2))
-        return decoder_outputs
 
     # forward process and training process
-    def fit(self, X_train, y_train, len_train, words_id_train,
-            X_validation, y_validation, len_validation, words_id_validation,name, print_log=True):
+    def fit(self, X_train, y_train, len_train,X_validation, y_validation, len_validation, name, print_log=True):
         # ---------------------------------------forward computation--------------------------------------------#
         y_train_pw = y_train[0]
         y_train_pph = y_train[1]
@@ -99,12 +61,13 @@ class BiLSTM_CBOW():
                 name="input_placeholder"
             )
 
+
             # 分词id信息占位
-            self.words_id_p = tf.placeholder(
-                dtype=tf.int32,
-                shape=(None, self.max_sentence_size),
-                name="word_id_placeholder"
-            )
+            #self.words_id_p = tf.placeholder(
+            #    dtype=tf.int32,
+            #    shape=(None, self.max_sentence_size),
+            #    name="word_id_placeholder"
+            #)
 
             self.y_p_pw = tf.placeholder(
                 dtype=tf.int32,
@@ -121,7 +84,6 @@ class BiLSTM_CBOW():
             #    shape=(None, self.max_sentence_size),
             #    name="label_placeholder_iph"
             #)
-
 
             # 相应序列的长度占位
             self.seq_len_p = tf.placeholder(
@@ -143,6 +105,7 @@ class BiLSTM_CBOW():
                 mask=self.mask,
                 name="y_p_pw_masked"
             )
+
             y_p_pph_masked = tf.boolean_mask(               # shape[seq_len1+seq_len2+....+,]
                 tensor=self.y_p_pph,
                 mask=self.mask,
@@ -156,10 +119,11 @@ class BiLSTM_CBOW():
             #)
 
             # embeddings
-            self.embeddings = tf.Variable(
-                initial_value=tf.zeros(shape=(self.vocab_size, self.embedding_size), dtype=tf.float32),
-                name="embeddings"
-            )
+            #self.embeddings = tf.Variable(
+            #    initial_value=tf.zeros(shape=(self.vocab_size, self.embedding_size), dtype=tf.float32),
+            #    name="embeddings"
+            #)
+
             self.word_embeddings=tf.Variable(
                 initial_value=tf.zeros(shape=(self.word_vocab_size,self.word_embedding_size),dtype=tf.float32),
                 name="word_embeddings"
@@ -167,7 +131,7 @@ class BiLSTM_CBOW():
 
             # -------------------------------------PW-----------------------------------------------------
             # embeded inputs:[batch_size,MAX_TIME_STPES,embedding_size]
-            inputs_pw = tf.nn.embedding_lookup(params=self.embeddings, ids=self.X_p, name="embeded_input_pw")
+            inputs_pw = tf.nn.embedding_lookup(params=self.word_embeddings, ids=self.X_p, name="embeded_input_pw")
             print("shape of inputs_pw:",inputs_pw.shape)
             #word_pw:[batch_size,Max_time_steps,word_embedding_size]
             #word_pw=tf.nn.embedding_lookup(params=self.word_embeddings,ids=self.words_id_p,name="word_pw")
@@ -176,51 +140,31 @@ class BiLSTM_CBOW():
             #inputs_pw=tf.concat(values=[inputs_pw,word_pw],axis=2,name="input_pw")
             #print("input_pw.shape",inputs_pw.shape)
 
-            # encoder cells
             # forward part
             en_lstm_forward1_pw = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
-            # en_lstm_forward2=rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
-            # en_lstm_forward=rnn.MultiRNNCell(cells=[en_lstm_forward1,en_lstm_forward2])
-            #dropout
-            en_lstm_forward1_pw=rnn.DropoutWrapper(
-                cell=en_lstm_forward1_pw,
-                input_keep_prob=self.input_keep_prob,
-                output_keep_prob=self.output_keep_prob
-            )
+            en_lstm_forward2_pw=rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
+            en_lstm_forward_pw=rnn.MultiRNNCell(cells=[en_lstm_forward1_pw,en_lstm_forward2_pw])
 
             # backward part
             en_lstm_backward1_pw = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
-            # en_lstm_backward2=rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
-            # en_lstm_backward=rnn.MultiRNNCell(cells=[en_lstm_backward1,en_lstm_backward2])
-            en_lstm_backward1_pw=rnn.DropoutWrapper(
-                cell=en_lstm_backward1_pw,
-                input_keep_prob=self.input_keep_prob,
-                output_keep_prob=self.output_keep_prob
-            )
+            en_lstm_backward2_pw=rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
+            en_lstm_backward_pw=rnn.MultiRNNCell(cells=[en_lstm_backward1_pw,en_lstm_backward2_pw])
 
-            # decoder cells
-            de_lstm_pw = rnn.BasicLSTMCell(num_units=self.hidden_units_num*2)
-            de_lstm_pw=rnn.DropoutWrapper(
-                cell=de_lstm_pw,
-                input_keep_prob=self.input_keep_prob,
-                output_keep_prob=self.output_keep_prob
-            )
-
-            # encode
-            encoder_outputs_pw, encoder_states_pw = self.encoder(
-                cell_forward=en_lstm_forward1_pw,
-                cell_backward=en_lstm_backward1_pw,
+            outputs, states = tf.nn.bidirectional_dynamic_rnn(
+                cell_fw=en_lstm_forward_pw,
+                cell_bw=en_lstm_backward_pw,
                 inputs=inputs_pw,
-                seq_length=self.seq_len_p,
-                scope_name="en_lstm_pw"
+                sequence_length=self.seq_len_p,
+                dtype=tf.float32,
+                scope="pw"
             )
-            # decode
-            h_pw = self.decoder(                    # shape of h is [batch*time_steps,hidden_units*2]
-                cell=de_lstm_pw,
-                initial_state=encoder_states_pw,
-                inputs=encoder_outputs_pw,
-                scope_name="de_lstm_pw"
-            )
+
+            outputs_forward_pw = outputs[0]                 # shape [batch_size, max_time, cell_fw.output_size]
+            outputs_backward_pw = outputs[1]                # shape [batch_size, max_time, cell_bw.output_size]
+            # concat final outputs [batch_size, max_time, cell_fw.output_size*2]
+            h_pw = tf.concat(values=[outputs_forward_pw, outputs_backward_pw], axis=2)
+            h_pw=tf.reshape(tensor=h_pw,shape=(-1,self.hidden_units_num*2),name="h_pw")
+            print("h_pw.shape",h_pw.shape)
 
             # fully connect layer(projection)
             w_pw = tf.Variable(
@@ -252,7 +196,7 @@ class BiLSTM_CBOW():
                 name="pred_normal_pw"
             )
 
-            pred_pw_masked = tf.boolean_mask(  # logits_pw_masked [seq_len1+seq_len2+....+,]
+            pred_pw_masked = tf.boolean_mask(               # logits_pw_masked [seq_len1+seq_len2+....+,]
                 tensor=pred_normal_pw,
                 mask=self.mask,
                 name="pred_pw_masked"
@@ -271,10 +215,9 @@ class BiLSTM_CBOW():
             )+tf.contrib.layers.l2_regularizer(self.lambda_pw)(w_pw)
             # ---------------------------------------------------------------------------------------
 
-
             # ----------------------------------PPH--------------------------------------------------
             # embeded inputs:[batch_size,MAX_TIME_STPES,embedding_size]
-            inputs_pph = tf.nn.embedding_lookup(params=self.embeddings, ids=self.X_p, name="embeded_input_pph")
+            inputs_pph = tf.nn.embedding_lookup(params=self.word_embeddings, ids=self.X_p, name="embeded_input_pph")
             # word_pph:[batch_size,Max_time_steps,word_embedding_size]
             #word_pph = tf.nn.embedding_lookup(params=self.word_embeddings, ids=self.words_id_p, name="word_pph")
             # print("shape of word_pph:", word_pph.shape)
@@ -282,51 +225,33 @@ class BiLSTM_CBOW():
             #inputs_pph = tf.concat(values=[inputs_pph, word_pph], axis=2, name="input_pph")
             # print("input_pph.shape", inputs_pph.shape)
             # shape of inputs[batch_size,max_time_stpes,embeddings_dims+class_num]
-            inputs_pph = tf.concat(values=[inputs_pph, pred_normal_one_hot_pw], axis=2, name="inputs_pph2")
-            # print("shape of input_pph:", inputs_pph.shape)
+            inputs_pph = tf.concat(values=[inputs_pph, pred_normal_one_hot_pw], axis=2, name="inputs_pph")
+            print("shape of input_pph:", inputs_pph.shape)
 
-
-            # encoder cells
             # forward part
             en_lstm_forward1_pph = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
-            # en_lstm_forward2=rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
-            # en_lstm_forward=rnn.MultiRNNCell(cells=[en_lstm_forward1,en_lstm_forward2])
-            en_lstm_forward1_pph=rnn.DropoutWrapper(
-                cell=en_lstm_forward1_pph,
-                input_keep_prob=self.input_keep_prob,
-                output_keep_prob=self.output_keep_prob
-            )
+            en_lstm_forward2_pph = rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
+            en_lstm_forward_pph = rnn.MultiRNNCell(cells=[en_lstm_forward1_pph, en_lstm_forward2_pph])
+
             # backward part
             en_lstm_backward1_pph = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
-            # en_lstm_backward2=rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
-            # en_lstm_backward=rnn.MultiRNNCell(cells=[en_lstm_backward1,en_lstm_backward2])
-            en_lstm_backward1_pph = rnn.DropoutWrapper(
-                cell=en_lstm_backward1_pph,
-                input_keep_prob=self.input_keep_prob,
-                output_keep_prob=self.output_keep_prob
-            )
-            # decoder cells
-            de_lstm_pph = rnn.BasicLSTMCell(num_units=self.hidden_units_num*2)
-            de_lstm_pph = rnn.DropoutWrapper(
-                cell=de_lstm_pph,
-                input_keep_prob=self.input_keep_prob,
-                output_keep_prob=self.output_keep_prob
-            )
-            # encode
-            encoder_outputs_pph, encoder_states_pph = self.encoder(
-                cell_forward=en_lstm_forward1_pph,
-                cell_backward=en_lstm_backward1_pph,
+            en_lstm_backward2_pph = rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
+            en_lstm_backward_pph = rnn.MultiRNNCell(cells=[en_lstm_backward1_pph, en_lstm_backward2_pph])
+
+            outputs, states = tf.nn.bidirectional_dynamic_rnn(
+                cell_fw=en_lstm_forward_pph,
+                cell_bw=en_lstm_backward_pph,
                 inputs=inputs_pph,
-                seq_length=self.seq_len_p,
-                scope_name="en_lstm_pph"
+                sequence_length=self.seq_len_p,
+                dtype=tf.float32,
+                scope="pph"
             )
-            # shape of h is [batch*time_steps,hidden_units*2]
-            h_pph = self.decoder(
-                cell=de_lstm_pph,
-                initial_state=encoder_states_pph,
-                inputs=encoder_outputs_pph,
-                scope_name="de_lstm_pph"
-            )
+
+            outputs_forward_pph = outputs[0]  # shape [batch_size, max_time, cell_fw.output_size]
+            outputs_backward_pph = outputs[1]  # shape [batch_size, max_time, cell_bw.output_size]
+            # concat final outputs [batch_size, max_time, cell_fw.output_size*2]
+            h_pph = tf.concat(values=[outputs_forward_pph, outputs_backward_pph], axis=2)
+            h_pph = tf.reshape(tensor=h_pph, shape=(-1, self.hidden_units_num * 2), name="h_pph")
 
             # fully connect layer(projection)
             w_pph = tf.Variable(
@@ -507,7 +432,6 @@ class BiLSTM_CBOW():
                             self.X_p: X_train[i * self.batch_size:(i + 1) * self.batch_size],
                             self.y_p_pw: y_train_pw[i * self.batch_size:(i + 1) * self.batch_size],
                             self.y_p_pph: y_train_pph[i * self.batch_size:(i + 1) * self.batch_size],
-                            self.words_id_p: words_id_train[i * self.batch_size:(i + 1) * self.batch_size],
                             self.seq_len_p: len_train[i * self.batch_size:(i + 1) * self.batch_size]
                         }
                     )
@@ -540,7 +464,6 @@ class BiLSTM_CBOW():
                         self.X_p: X_validation,
                         self.y_p_pw: y_validation_pw,
                         self.y_p_pph: y_validation_pph,
-                        self.words_id_p:words_id_validation,
                         self.seq_len_p: len_validation
                     }
                 )
@@ -597,7 +520,6 @@ class BiLSTM_CBOW():
                     feed_dict={
                         self.X_p: X_validation,
                         self.seq_len_p: len_validation,
-                        self.words_id_p:words_id_validation
                     }
                 )
 
@@ -696,11 +618,11 @@ class BiLSTM_CBOW():
 if __name__ == "__main__":
     # 读数据
     # pw
-    df_train_pw = pd.read_pickle(path="./dataset/temptest/pw_summary_train.pkl")
-    df_validation_pw = pd.read_pickle(path="./dataset/temptest/pw_summary_validation.pkl")
+    df_train_pw = pd.read_pickle(path="../data/dataset/temptest/pw_summary_train.pkl")
+    df_validation_pw = pd.read_pickle(path="../data/dataset/temptest/pw_summary_validation.pkl")
     # pph
-    df_train_pph = pd.read_pickle(path="./dataset/temptest/pph_summary_train.pkl")
-    df_validation_pph = pd.read_pickle(path="./dataset/temptest/pph_summary_validation.pkl")
+    df_train_pph = pd.read_pickle(path="../data/dataset/temptest/pph_summary_train.pkl")
+    df_validation_pph = pd.read_pickle(path="../data/dataset/temptest/pph_summary_validation.pkl")
 
     # iph
     #df_train_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_train.pkl")
@@ -710,10 +632,10 @@ if __name__ == "__main__":
     # 但是标签是不一样的,所以需要每个都要具体定义
     X_train = np.asarray(list(df_train_pw['X'].values))
     X_validation = np.asarray(list(df_validation_pw['X'].values))
-    print("X_train:",X_train)
-    print("X_train.shape",X_train.shape)
-    print("X_validation:",X_validation)
-    print("X_validation.shape:",X_validation.shape)
+    print("X_train:\n",X_train)
+    print("X_train.shape\n",X_train.shape)
+    print("X_validation:\n",X_validation)
+    print("X_validation.shape:\n",X_validation.shape)
 
     # tags
     y_train_pw = np.asarray(list(df_train_pw['y'].values))
@@ -737,54 +659,16 @@ if __name__ == "__main__":
     # X_validation = [X_validation_pw, X_validation_pph, X_validation_iph]
     y_validation = [y_validation_pw, y_validation_pph]
 
-    # print("X_train_pw:\n",X_train_pw);      print(X_train_pw.shape)
-    # print("X_train_pph:\n", X_train_pph);   print(X_train_pph.shape)
+    #print("X_train_pw:\n",X_train_pw);      print(X_train_pw.shape)
+    #print("X_train_pph:\n", X_train_pph);   print(X_train_pph.shape)
     # print("X_train_iph:\n", X_train_iph);   print(X_train_iph.shape)
 
-    # print("y_train_pw:\n", y_train_pw);
-    # print(y_train_pw.shape)
-    # print("y_train_pph:\n", y_train_pph);
-    # print(y_train_pph.shape)
+    print("y_train_pw:\n", y_train_pw);
+    print(y_train_pw.shape)
+    print("y_train_pph:\n", y_train_pph);
+    print(y_train_pph.shape)
     # print("y_train_iph:\n", y_train_iph);
     # print(y_train_iph.shape)
 
-    #train的分词id信息
-    words_id_train=np.zeros(shape=(66150,parameter.MAX_SENTENCE_SIZE),dtype=np.int32)
-    f_word_train = open(file="./data/corpus/word_train_tag.txt", encoding="utf-8")
-    lines_train = f_word_train.readlines()
-    i=0
-    for line in lines_train:
-        # print(line)
-        line = line.strip()
-        line_list = line.split(sep=" ")
-        #print(line_list)
-        j = 0
-        for id in line_list:
-            words_id_train[i, j] = id
-            j += 1
-        i += 1
-    print(words_id_train)
-    print("word_id_train.shape",words_id_train.shape)
-
-    #validation的分词id信息
-    words_id_validation=np.zeros(shape=(2500,parameter.MAX_SENTENCE_SIZE),dtype=np.int32)
-    f_word_validation = open(file="./data/corpus/word_valid_tag.txt", encoding="utf-8")
-    lines_validation = f_word_validation.readlines()
-    i = 0
-    for line in lines_validation:
-        # print(line)
-        line = line.strip()
-        line_list = line.split(sep=" ")
-        # print(line_list)
-        j = 0
-        for id in line_list:
-            words_id_validation[i, j] = id
-            j += 1
-        i += 1
-    print(words_id_validation)
-    print("word_id_validation.shape",words_id_validation.shape)
-
-
     model = BiLSTM_CBOW()
-    model.fit(X_train, y_train, len_train, words_id_train,
-              X_validation, y_validation, len_validation, words_id_validation,"test", False)
+    model.fit(X_train, y_train, len_train,X_validation, y_validation, len_validation, "test", False)
