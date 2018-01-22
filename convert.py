@@ -212,7 +212,6 @@ if __name__ =="__main__":
     toProsody(inFile="./data/raw/prosody_train_tag.utf8", outFile="./data/corpus/prosody_train.txt")
     toProsody2(inFile="./data/raw/prosody_valid_tag.rst", outFile="./data/corpus/prosody_valid.txt")
 
-
     #toWords(inFile="prosody_test_tag.utf8",outFile="word_test.txt")
     #toWords(inFile_train="prosody_train_tag.utf8",
     #        inFile_valid="prosody_valid_tag.rst",
