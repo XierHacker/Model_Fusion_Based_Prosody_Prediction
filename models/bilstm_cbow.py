@@ -180,10 +180,10 @@ class BiLSTM_CBOW():
                 name="bias_pw"
             )
             #logits
-            logits_pw = tf.matmul(h_pw, w_pw) + b_pw        #logits_pw:[batch_size*max_time, 3]
-            logits_normal_pw=tf.reshape(                    #logits in an normal way:[batch_size,max_time_stpes,3]
+            logits_pw = tf.matmul(h_pw, w_pw) + b_pw        #logits_pw:[batch_size*max_time, 2]
+            logits_normal_pw=tf.reshape(                    #logits in an normal way:[batch_size,max_time_stpes,2]
                 tensor=logits_pw,
-                shape=(-1,self.max_sentence_size,3),
+                shape=(-1,self.max_sentence_size,self.class_num),
                 name="logits_normal_pw"
             )
             logits_pw_masked = tf.boolean_mask(             # logits_pw_masked [seq_len1+seq_len2+....+,3]
@@ -272,10 +272,10 @@ class BiLSTM_CBOW():
                 name="bias_pph"
             )
             # logits
-            logits_pph = tf.matmul(h_pph, w_pph) + b_pph  # shape of logits:[batch_size*max_time, 3]
-            logits_normal_pph = tf.reshape(                 # logits in an normal way:[batch_size,max_time_stpes,3]
+            logits_pph = tf.matmul(h_pph, w_pph) + b_pph  # shape of logits:[batch_size*max_time, 2]
+            logits_normal_pph = tf.reshape(                 # logits in an normal way:[batch_size,max_time_stpes,2]
                 tensor=logits_pph,
-                shape=(-1, self.max_sentence_size, 3),
+                shape=(-1, self.max_sentence_size, self.class_num),
                 name="logits_normal_pph"
             )
             logits_pph_masked = tf.boolean_mask(            # [seq_len1+seq_len2+....+,3]
@@ -451,18 +451,18 @@ class BiLSTM_CBOW():
                     self.train_losses.append(train_loss)
 
                     # metrics
-                    accuracy_pw, xx1,xx2,f1_1_pw, xx3,xx4,f1_2_pw = util.eval(y_true=y_train_pw_masked,y_pred=train_pred_pw)    # pw
-                    accuracy_pph, xx1,xx2,f1_1_pph, xx3,xx4,f1_2_pph = util.eval(y_true=y_train_pph_masked,y_pred=train_pred_pph)   # pph
+                    accuracy_pw, f1_pw= util.eval(y_true=y_train_pw_masked,y_pred=train_pred_pw)       # pw
+                    accuracy_pph, f1_pph= util.eval(y_true=y_train_pph_masked,y_pred=train_pred_pph)   # pph
                     #accuracy_iph, f1_1_iph, f1_2_iph = util.eval(y_true=y_train_iph_masked,y_pred=train_pred_iph)   # iph
 
                     self.train_accus_pw.append(accuracy_pw)
                     self.train_accus_pph.append(accuracy_pph)
                     #self.train_accus_iph.append(accuracy_iph)
                     # F1-score
-                    self.c1_f_pw.append(f1_1_pw);
-                    self.c2_f_pw.append(f1_2_pw)
-                    self.c1_f_pph.append(f1_1_pph);
-                    self.c2_f_pph.append(f1_2_pph)
+                    self.c1_f_pw.append(f1_pw[0]);
+                    self.c2_f_pw.append(f1_pw[1])
+                    self.c1_f_pph.append(f1_pph[0]);
+                    self.c2_f_pph.append(f1_pph[1])
                     #self.c1_f_iph.append(f1_1_iph);
                     #self.c2_f_iph.append(f1_2_iph)
 
@@ -484,30 +484,15 @@ class BiLSTM_CBOW():
                 # print("valid_pred_pph.shape:",valid_pred_pph.shape)
                 # print("valid_pred_iph.shape:",valid_pred_iph.shape)
 
-                #final_pred=util.recover2(X=X_validation,preds_pw=valid_pred_pw,preds_pph=valid_pred_pph,filename=None)
-                #print("final_pred.shape",final_pred.shape)
-
-                #final_true=util.recover2(X=X_validation,preds_pw=y_valid_pw_masked,preds_pph=y_valid_pph_masked,filename=None)
-                #print("final_true.shape",final_true.shape)
-
                 # metrics
-                self.valid_accuracy_pw, self.valid_precision_1_pw,self.valid_recall_1_pw,self.valid_f1_1_pw, \
-                self.valid_precision_2_pw, self.valid_recall_2_pw,self.valid_f1_2_pw = util.eval(y_true=y_valid_pw_masked,y_pred=valid_pred_pw)
+                self.valid_accuracy_pw, self.valid_f1_pw = util.eval(y_true=y_valid_pw_masked,y_pred=valid_pred_pw)
+                self.valid_accuracy_pph, self.valid_f1_pph = util.eval(y_true=y_valid_pph_masked,y_pred=valid_pred_pph)
 
-                self.valid_accuracy_pph, self.valid_precision_1_pph, self.valid_recall_1_pph, self.valid_f1_1_pph, \
-                self.valid_precision_2_pph, self.valid_recall_2_pph, self.valid_f1_2_pph = util.eval(y_true=y_valid_pph_masked,y_pred=valid_pred_pph)
                 #self.valid_accuracy_iph, self.valid_f1_1_iph, self.valid_f1_2_iph = util.eval(y_true=y_valid_iph_masked,y_pred=valid_pred_iph)
-
-                #ac,f1_1,f1_2=util.eval(y_true=final_true,y_pred=final_pred)
-                #print information
                 print("Epoch ", epoch, " finished.", "spend ", round((time.time() - start_time) / 60, 2), " mins")
                 self.showInfo(type="training")
                 self.showInfo(type="validation")
-                #print("validation:")
-                #print("ac",ac)
-                #print("f1_1:",f1_1)
-                #print("f1_2:",f1_2)
-                #self.showInfo(type="validation")
+
 
                 # when we get a new best validation accuracy,we store the model
                 if self.best_validation_loss < self.validation_loss:
@@ -527,6 +512,7 @@ class BiLSTM_CBOW():
                     # Generates MetaGraphDef.
                     saver.export_meta_graph("./models/" + name + "/bilstm/my-model-10000.meta")
                 print("\n\n")
+
                 # test:using X_validation_pw
                 test_pred_pw, test_pred_pph = sess.run(
                     fetches=[pred_pw, pred_pph],
@@ -612,7 +598,7 @@ class BiLSTM_CBOW():
             #print("----avarage f1-Score of N:", self.valid_f1_1_pw)
             #print("----avarage precision of B:", self.valid_precision_2_pw)
             #print("----avarage recall of B:", self.valid_recall_2_pw)
-            print("----avarage f1-Score of B:", self.valid_f1_2_pw)
+            print("----avarage f1-Score of B:", self.valid_f1_pw[0])
             print("PPH:")
             print("----avarage accuracy :", self.valid_accuracy_pph)
             #print("----avarage precision of N:", self.valid_precision_1_pph)
@@ -620,7 +606,7 @@ class BiLSTM_CBOW():
             #print("----avarage f1-Score of N:", self.valid_f1_1_pph)
             #print("----avarage precision of B:", self.valid_precision_2_pph)
             #print("----avarage recall of B:", self.valid_recall_2_pph)
-            print("----avarage f1-Score of B:", self.valid_f1_2_pph)
+            print("----avarage f1-Score of B:", self.valid_f1_pph[1])
             #print("----avarage f1-Score of N:", self.valid_f1_1_pph)
             #print("----avarage f1-Score of B:", self.valid_f1_2_pph)
             #print("IPH:")
@@ -655,6 +641,9 @@ if __name__ == "__main__":
     # tags
     y_train_pw = np.asarray(list(df_train_pw['y'].values))
     y_validation_pw = np.asarray(list(df_validation_pw['y'].values))
+
+    print("y_train_pw:",y_train_pw)
+    print("y_validation_pw:",y_validation_pw)
 
     y_train_pph = np.asarray(list(df_train_pph['y'].values))
     y_validation_pph = np.asarray(list(df_validation_pph['y'].values))

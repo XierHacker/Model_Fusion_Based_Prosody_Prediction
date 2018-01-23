@@ -24,23 +24,23 @@ def getTag2(preds_pw,preds_pph):
     # print("arg:\n", arg)
     for i in range(length):
         if arg[i] == 0:
-            if complex[0, i] == 2:
+            if complex[0, i] == 1:
                 arg[i] = 4
             else:
                 arg[i] = 0
         if arg[i] == 1:
-            if complex[1, i] == 2:
+            if complex[1, i] == 1:
                 arg[i] = 2
             else:
                 arg[i] = 0
     arg = (arg / 2).astype(dtype=np.int32)
     return arg
 
-def charBasedTag2(X,preds_pw,preds_pph):
+#def charBasedTag2(X,preds_pw,preds_pph):
     # get id2words
-    df_words_ids = pd.read_csv(filepath_or_buffer="../data/dataset/temptest/words_ids.csv", encoding="utf-8")
+#    df_words_ids = pd.read_csv(filepath_or_buffer="../data/dataset/temptest/words_ids.csv", encoding="utf-8")
     # print(df_words_ids.head(5))
-    id2words = pd.Series(data=df_words_ids["words"].values, index=df_words_ids["id"].values)
+#    id2words = pd.Series(data=df_words_ids["words"].values, index=df_words_ids["id"].values)
     # print(id2words[2])
 
     #

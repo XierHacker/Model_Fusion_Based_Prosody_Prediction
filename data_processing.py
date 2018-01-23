@@ -197,7 +197,7 @@ def make_component(corpus,name):
     print("charactor number:",len(words))
 
     words_id = range(1, len(words) + 1)         #字的id列表,从1开始，因为准备把0作为填充值
-    tags = ['x', 'n', 'b']                      #tag列表
+    tags = ['n', 'b']                           #tag列表
     tags_id = range(len(tags))                  #tag的id列表
 
     #保存基本组件,在./dataset/name/下面会有words_ids.csv,tags_ids.csv,df_data.csv三个文件
