@@ -533,6 +533,8 @@ class BiLSTM_CBOW():
                     feed_dict={
                         self.X_p: X_validation,
                         self.seq_len_p: len_validation,
+                        self.input_keep_prob_p:1.0,
+                        self.output_keep_prob_p:1.0
                     }
                 )
 

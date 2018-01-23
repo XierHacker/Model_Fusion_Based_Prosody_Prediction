@@ -115,7 +115,9 @@ class Alignment_Seq2Seq():
             #    name="label_placeholder_iph"
             #)
 
-
+            # dropout 占位
+            self.input_keep_prob_p = tf.placeholder(dtype=tf.float32, shape=[], name="input_keep_prob_p")
+            self.output_keep_prob_p = tf.placeholder(dtype=tf.float32, shape=[], name="output_keep_prob_p")
             # 相应序列的长度占位
             self.seq_len_p = tf.placeholder(
                 dtype=tf.int32,
@@ -177,8 +179,8 @@ class Alignment_Seq2Seq():
             #dropout
             en_lstm_forward1_pw=rnn.DropoutWrapper(
                 cell=en_lstm_forward1_pw,
-                input_keep_prob=self.input_keep_prob,
-                output_keep_prob=self.output_keep_prob
+                input_keep_prob=self.input_keep_prob_p,
+                output_keep_prob=self.output_keep_prob_p
             )
 
             # backward part
@@ -187,16 +189,16 @@ class Alignment_Seq2Seq():
             # en_lstm_backward=rnn.MultiRNNCell(cells=[en_lstm_backward1,en_lstm_backward2])
             en_lstm_backward1_pw=rnn.DropoutWrapper(
                 cell=en_lstm_backward1_pw,
-                input_keep_prob=self.input_keep_prob,
-                output_keep_prob=self.output_keep_prob
+                input_keep_prob=self.input_keep_prob_p,
+                output_keep_prob=self.output_keep_prob_p
             )
 
             # decoder cells
             de_lstm_pw = rnn.BasicLSTMCell(num_units=self.hidden_units_num*2)
             de_lstm_pw=rnn.DropoutWrapper(
                 cell=de_lstm_pw,
-                input_keep_prob=self.input_keep_prob,
-                output_keep_prob=self.output_keep_prob
+                input_keep_prob=self.input_keep_prob_p,
+                output_keep_prob=self.output_keep_prob_p
             )
 
             # encode
@@ -286,8 +288,8 @@ class Alignment_Seq2Seq():
             # en_lstm_forward=rnn.MultiRNNCell(cells=[en_lstm_forward1,en_lstm_forward2])
             en_lstm_forward1_pph=rnn.DropoutWrapper(
                 cell=en_lstm_forward1_pph,
-                input_keep_prob=self.input_keep_prob,
-                output_keep_prob=self.output_keep_prob
+                input_keep_prob=self.input_keep_prob_p,
+                output_keep_prob=self.output_keep_prob_p
             )
             # backward part
             en_lstm_backward1_pph = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
@@ -295,15 +297,15 @@ class Alignment_Seq2Seq():
             # en_lstm_backward=rnn.MultiRNNCell(cells=[en_lstm_backward1,en_lstm_backward2])
             en_lstm_backward1_pph = rnn.DropoutWrapper(
                 cell=en_lstm_backward1_pph,
-                input_keep_prob=self.input_keep_prob,
-                output_keep_prob=self.output_keep_prob
+                input_keep_prob=self.input_keep_prob_p,
+                output_keep_prob=self.output_keep_prob_p
             )
             # decoder cells
             de_lstm_pph = rnn.BasicLSTMCell(num_units=self.hidden_units_num*2)
             de_lstm_pph = rnn.DropoutWrapper(
                 cell=de_lstm_pph,
-                input_keep_prob=self.input_keep_prob,
-                output_keep_prob=self.output_keep_prob
+                input_keep_prob=self.input_keep_prob_p,
+                output_keep_prob=self.output_keep_prob_p
             )
             # encode
             encoder_outputs_pph, encoder_states_pph = self.encoder(
@@ -500,7 +502,9 @@ class Alignment_Seq2Seq():
                             self.X_p: X_train[i * self.batch_size:(i + 1) * self.batch_size],
                             self.y_p_pw: y_train_pw[i * self.batch_size:(i + 1) * self.batch_size],
                             self.y_p_pph: y_train_pph[i * self.batch_size:(i + 1) * self.batch_size],
-                            self.seq_len_p: len_train[i * self.batch_size:(i + 1) * self.batch_size]
+                            self.seq_len_p: len_train[i * self.batch_size:(i + 1) * self.batch_size],
+                            self.input_keep_prob_p:self.input_keep_prob,
+                            self.output_keep_prob_p:self.output_keep_prob
                         }
                     )
 
@@ -532,7 +536,10 @@ class Alignment_Seq2Seq():
                         self.X_p: X_validation,
                         self.y_p_pw: y_validation_pw,
                         self.y_p_pph: y_validation_pph,
-                        self.seq_len_p: len_validation
+                        self.seq_len_p: len_validation,
+                        self.input_keep_prob_p:1.0,
+                        self.output_keep_prob_p:1.0
+
                     }
                 )
                 # print("valid_pred_pw.shape:",valid_pred_pw.shape)
@@ -587,7 +594,9 @@ class Alignment_Seq2Seq():
                     fetches=[pred_pw, pred_pph],
                     feed_dict={
                         self.X_p: X_validation,
-                        self.seq_len_p: len_validation
+                        self.seq_len_p: len_validation,
+                        self.input_keep_prob_p:1.0,
+                        self.output_keep_prob_p:1.0
                     }
                 )
 
