@@ -5,12 +5,12 @@ INPUT_SIZE=WORD_EMBEDDING_SIZE=100      #词嵌入维度
 
 MAX_EPOCH=20                            #最大迭代次数
 LAYER_NUM=2                             #lstm层数2
-HIDDEN_UNITS_NUM=256                    #隐藏层结点数量
-HIDDEN_UNITS_NUM2=256                   #隐藏层2结点数量
+HIDDEN_UNITS_NUM=128                    #隐藏层结点数量
+HIDDEN_UNITS_NUM2=128                   #隐藏层2结点数量
 BATCH_SIZE=512                          #batch大小
 
 #learning rate
-LEARNING_RATE=0.001                      #学习率
+LEARNING_RATE=0.01                      #学习率
 DECAY=0.85                              #衰减系数
 
 #Weaken Overfitting
@@ -19,6 +19,8 @@ LAMBDA_PW=0.5                           #PW层级正则化系数
 LAMBDA_PPH=0.5                          #PW层级正则化系数
 LAMBDA_IPH=0.5                          #PW层级正则化系数
 
+INPUT_KEEP_PROB=1.0                             #input dropout比率
+OUTPUT_KEEP_PROB=0.5                            #output dropout 比率
 
 #can't modify
 CLASS_NUM=3                             #类别数量
