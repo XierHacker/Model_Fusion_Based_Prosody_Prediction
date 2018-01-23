@@ -577,11 +577,11 @@ class BiLSTM_CBOW():
             print("----avarage training loss:", sum(self.train_losses) / len(self.train_losses))
             print("PW:")
             print("----avarage accuracy:", sum(self.train_accus_pw) / len(self.train_accus_pw))
-            print("----avarage f1-Score of N:", sum(self.c1_f_pw) / len(self.c1_f_pw))
+            #print("----avarage f1-Score of N:", sum(self.c1_f_pw) / len(self.c1_f_pw))
             print("----avarage f1-Score of B:", sum(self.c2_f_pw) / len(self.c2_f_pw))
             print("PPH:")
             print("----avarage accuracy :", sum(self.train_accus_pph) / len(self.train_accus_pph))
-            print("----avarage f1-Score of N:", sum(self.c1_f_pph) / len(self.c1_f_pph))
+            #print("----avarage f1-Score of N:", sum(self.c1_f_pph) / len(self.c1_f_pph))
             print("----avarage f1-Score of B:", sum(self.c2_f_pph) / len(self.c2_f_pph))
             #print("IPH:")
             #print("----avarage accuracy:", sum(self.train_accus_iph) / len(self.train_accus_iph))
@@ -592,19 +592,19 @@ class BiLSTM_CBOW():
             print("----avarage validation loss:", self.validation_loss)
             print("PW:")
             print("----avarage accuracy:", self.valid_accuracy_pw)
-            print("----avarage precision of N:", self.valid_precision_1_pw)
-            print("----avarage recall of N:", self.valid_recall_1_pw)
-            print("----avarage f1-Score of N:", self.valid_f1_1_pw)
-            print("----avarage precision of B:", self.valid_precision_2_pw)
-            print("----avarage recall of B:", self.valid_recall_2_pw)
+            #print("----avarage precision of N:", self.valid_precision_1_pw)
+            #print("----avarage recall of N:", self.valid_recall_1_pw)
+            #print("----avarage f1-Score of N:", self.valid_f1_1_pw)
+            #print("----avarage precision of B:", self.valid_precision_2_pw)
+            #print("----avarage recall of B:", self.valid_recall_2_pw)
             print("----avarage f1-Score of B:", self.valid_f1_2_pw)
             print("PPH:")
             print("----avarage accuracy :", self.valid_accuracy_pph)
-            print("----avarage precision of N:", self.valid_precision_1_pph)
-            print("----avarage recall of N:", self.valid_recall_1_pph)
-            print("----avarage f1-Score of N:", self.valid_f1_1_pph)
-            print("----avarage precision of B:", self.valid_precision_2_pph)
-            print("----avarage recall of B:", self.valid_recall_2_pph)
+            #print("----avarage precision of N:", self.valid_precision_1_pph)
+            #print("----avarage recall of N:", self.valid_recall_1_pph)
+            #print("----avarage f1-Score of N:", self.valid_f1_1_pph)
+            #print("----avarage precision of B:", self.valid_precision_2_pph)
+            #print("----avarage recall of B:", self.valid_recall_2_pph)
             print("----avarage f1-Score of B:", self.valid_f1_2_pph)
             #print("----avarage f1-Score of N:", self.valid_f1_1_pph)
             #print("----avarage f1-Score of B:", self.valid_f1_2_pph)
@@ -630,18 +630,18 @@ if __name__ == "__main__":
 
     # 实际上,X里面的内容都是一样的,所以这里统一使用pw的X来作为所有的X
     # 但是标签是不一样的,所以需要每个都要具体定义
-    X_train = np.asarray(list(df_train_pw['X'].values))
+    X_train = np.asarray(list(df_train_pw['X'].values))[:30000]
     X_validation = np.asarray(list(df_validation_pw['X'].values))
-    print("X_train:\n",X_train)
-    print("X_train.shape\n",X_train.shape)
-    print("X_validation:\n",X_validation)
-    print("X_validation.shape:\n",X_validation.shape)
+    #print("X_train:\n",X_train)
+    #print("X_train.shape\n",X_train.shape)
+    #print("X_validation:\n",X_validation)
+    #print("X_validation.shape:\n",X_validation.shape)
 
     # tags
-    y_train_pw = np.asarray(list(df_train_pw['y'].values))
+    y_train_pw = np.asarray(list(df_train_pw['y'].values))[:30000]
     y_validation_pw = np.asarray(list(df_validation_pw['y'].values))
 
-    y_train_pph = np.asarray(list(df_train_pph['y'].values))
+    y_train_pph = np.asarray(list(df_train_pph['y'].values))[:30000]
     y_validation_pph = np.asarray(list(df_validation_pph['y'].values))
 
     #y_train_iph = np.asarray(list(df_train_iph['y'].values))
@@ -649,10 +649,10 @@ if __name__ == "__main__":
 
     # length每一行序列的长度
     # 因为都一样,所以统一使用pw的
-    len_train = np.asarray(list(df_train_pw['sentence_len'].values))
+    len_train = np.asarray(list(df_train_pw['sentence_len'].values))[:30000]
     len_validation = np.asarray(list(df_validation_pw['sentence_len'].values))
-    print("len_train:", len_train.shape)
-    print("len_validation:", len_validation.shape)
+    #print("len_train:", len_train.shape)
+    #print("len_validation:", len_validation.shape)
 
     # X_train = [X_train_pw, X_train_pph, X_train_iph]
     y_train = [y_train_pw, y_train_pph]
@@ -663,10 +663,10 @@ if __name__ == "__main__":
     #print("X_train_pph:\n", X_train_pph);   print(X_train_pph.shape)
     # print("X_train_iph:\n", X_train_iph);   print(X_train_iph.shape)
 
-    print("y_train_pw:\n", y_train_pw);
-    print(y_train_pw.shape)
-    print("y_train_pph:\n", y_train_pph);
-    print(y_train_pph.shape)
+    #print("y_train_pw:\n", y_train_pw);
+    #print(y_train_pw.shape)
+    #print("y_train_pph:\n", y_train_pph);
+    #print(y_train_pph.shape)
     # print("y_train_iph:\n", y_train_iph);
     # print(y_train_iph.shape)
 

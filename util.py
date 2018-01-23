@@ -110,7 +110,7 @@ def recover2(X,preds_pw,preds_pph,filename):
     print("arg.shape",arg.shape)
     print("arg:\n", arg)
     #get id2words
-    df_words_ids = pd.read_csv(filepath_or_buffer="./data/dataset/temptest/words_ids.csv", encoding="utf-8")
+    df_words_ids = pd.read_csv(filepath_or_buffer="../data/dataset/temptest/words_ids.csv", encoding="utf-8")
     print(df_words_ids.head(5))
     id2words = pd.Series(data=df_words_ids["words"].values, index=df_words_ids["id"].values)
     print(id2words[2])
