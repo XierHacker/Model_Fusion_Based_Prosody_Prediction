@@ -593,12 +593,12 @@ class Alignment_Seq2Seq():
 
                 # recover to original corpus txt
                 # shape of valid_pred_pw,valid_pred_pw,valid_pred_pw:[corpus_size*time_stpes]
-                #util.recover2(
-                #    X=X_validation,
-                #    preds_pw=test_pred_pw,
-                #    preds_pph=test_pred_pph,
-                #    filename="recover_epoch_" + str(epoch) + ".txt"
-                #)
+                util.recover2(
+                    X=X_validation,
+                    preds_pw=test_pred_pw,
+                    preds_pph=test_pred_pph,
+                    filename="recover_epoch_" + str(epoch) + ".txt"
+                )
 
     # 返回预测的结果或者准确率,y not None的时候返回准确率,y ==None的时候返回预测值
     def pred(self, name, X, y=None, ):

@@ -38,8 +38,8 @@ class BiLSTM_CBOW():
         self.lambda_pph=parameter.LAMBDA_PPH
         self.lambda_iph=parameter.LAMBDA_IPH
 
-        #self.input_keep_prob=parameter.INPUT_KEEP_PROB
-        #self.output_keep_prob=parameter.OUTPUT_KEEP_PROB
+        self.input_keep_prob=parameter.INPUT_KEEP_PROB
+        self.output_keep_prob=parameter.OUTPUT_KEEP_PROB
 
 
     # forward process and training process
@@ -61,14 +61,6 @@ class BiLSTM_CBOW():
                 name="input_placeholder"
             )
 
-
-            # 分词id信息占位
-            #self.words_id_p = tf.placeholder(
-            #    dtype=tf.int32,
-            #    shape=(None, self.max_sentence_size),
-            #    name="word_id_placeholder"
-            #)
-
             self.y_p_pw = tf.placeholder(
                 dtype=tf.int32,
                 shape=(None, self.max_sentence_size),
@@ -79,11 +71,17 @@ class BiLSTM_CBOW():
                 shape=(None, self.max_sentence_size),
                 name="label_placeholder_pph"
             )
+
+
+
             #self.y_p_iph = tf.placeholder(
             #    dtype=tf.int32,
             #    shape=(None, self.max_sentence_size),
             #    name="label_placeholder_iph"
             #)
+            # dropout 占位
+            self.input_keep_prob_p = tf.placeholder(dtype=tf.float32, shape=[], name="input_keep_prob_p")
+            self.output_keep_prob_p=tf.placeholder(dtype=tf.float32, shape=[], name="output_keep_prob_p")
 
             # 相应序列的长度占位
             self.seq_len_p = tf.placeholder(
@@ -133,22 +131,28 @@ class BiLSTM_CBOW():
             # embeded inputs:[batch_size,MAX_TIME_STPES,embedding_size]
             inputs_pw = tf.nn.embedding_lookup(params=self.word_embeddings, ids=self.X_p, name="embeded_input_pw")
             print("shape of inputs_pw:",inputs_pw.shape)
-            #word_pw:[batch_size,Max_time_steps,word_embedding_size]
-            #word_pw=tf.nn.embedding_lookup(params=self.word_embeddings,ids=self.words_id_p,name="word_pw")
-            #print("shape of word_pw:",word_pw.shape)
-            #concat,[batch_size,Max_time_steps,embedding_size+word_embedding_size]
-            #inputs_pw=tf.concat(values=[inputs_pw,word_pw],axis=2,name="input_pw")
-            #print("input_pw.shape",inputs_pw.shape)
 
             # forward part
             en_lstm_forward1_pw = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
             en_lstm_forward2_pw=rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
             en_lstm_forward_pw=rnn.MultiRNNCell(cells=[en_lstm_forward1_pw,en_lstm_forward2_pw])
+            #dropout
+            en_lstm_forward_pw=rnn.DropoutWrapper(
+                cell=en_lstm_forward_pw,
+                input_keep_prob=self.input_keep_prob_p,
+                output_keep_prob=self.output_keep_prob_p
+            )
 
             # backward part
             en_lstm_backward1_pw = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
             en_lstm_backward2_pw=rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
             en_lstm_backward_pw=rnn.MultiRNNCell(cells=[en_lstm_backward1_pw,en_lstm_backward2_pw])
+            #dropout
+            en_lstm_backward_pw=rnn.DropoutWrapper(
+                cell=en_lstm_backward_pw,
+                input_keep_prob=self.input_keep_prob_p,
+                output_keep_prob=self.output_keep_prob_p
+            )
 
             outputs, states = tf.nn.bidirectional_dynamic_rnn(
                 cell_fw=en_lstm_forward_pw,
@@ -218,13 +222,6 @@ class BiLSTM_CBOW():
             # ----------------------------------PPH--------------------------------------------------
             # embeded inputs:[batch_size,MAX_TIME_STPES,embedding_size]
             inputs_pph = tf.nn.embedding_lookup(params=self.word_embeddings, ids=self.X_p, name="embeded_input_pph")
-            # word_pph:[batch_size,Max_time_steps,word_embedding_size]
-            #word_pph = tf.nn.embedding_lookup(params=self.word_embeddings, ids=self.words_id_p, name="word_pph")
-            # print("shape of word_pph:", word_pph.shape)
-            # concat,[batch_size,Max_time_steps,embedding_size+word_embedding_size]
-            #inputs_pph = tf.concat(values=[inputs_pph, word_pph], axis=2, name="input_pph")
-            # print("input_pph.shape", inputs_pph.shape)
-            # shape of inputs[batch_size,max_time_stpes,embeddings_dims+class_num]
             inputs_pph = tf.concat(values=[inputs_pph, pred_normal_one_hot_pw], axis=2, name="inputs_pph")
             print("shape of input_pph:", inputs_pph.shape)
 
@@ -232,11 +229,23 @@ class BiLSTM_CBOW():
             en_lstm_forward1_pph = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
             en_lstm_forward2_pph = rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
             en_lstm_forward_pph = rnn.MultiRNNCell(cells=[en_lstm_forward1_pph, en_lstm_forward2_pph])
+            #dropout
+            en_lstm_forward_pph=rnn.DropoutWrapper(
+                cell=en_lstm_forward_pph,
+                input_keep_prob=self.input_keep_prob_p,
+                output_keep_prob=self.output_keep_prob_p
+            )
 
             # backward part
             en_lstm_backward1_pph = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
             en_lstm_backward2_pph = rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
             en_lstm_backward_pph = rnn.MultiRNNCell(cells=[en_lstm_backward1_pph, en_lstm_backward2_pph])
+            #dropout
+            en_lstm_backward_pph=rnn.DropoutWrapper(
+                cell=en_lstm_backward_pph,
+                input_keep_prob=self.input_keep_prob_p,
+                output_keep_prob=self.output_keep_prob_p
+            )
 
             outputs, states = tf.nn.bidirectional_dynamic_rnn(
                 cell_fw=en_lstm_forward_pph,
@@ -432,14 +441,16 @@ class BiLSTM_CBOW():
                             self.X_p: X_train[i * self.batch_size:(i + 1) * self.batch_size],
                             self.y_p_pw: y_train_pw[i * self.batch_size:(i + 1) * self.batch_size],
                             self.y_p_pph: y_train_pph[i * self.batch_size:(i + 1) * self.batch_size],
-                            self.seq_len_p: len_train[i * self.batch_size:(i + 1) * self.batch_size]
+                            self.seq_len_p: len_train[i * self.batch_size:(i + 1) * self.batch_size],
+                            self.input_keep_prob_p:self.input_keep_prob,
+                            self.output_keep_prob_p:self.output_keep_prob
                         }
                     )
 
                     # loss
                     self.train_losses.append(train_loss)
-                    # metrics
 
+                    # metrics
                     accuracy_pw, xx1,xx2,f1_1_pw, xx3,xx4,f1_2_pw = util.eval(y_true=y_train_pw_masked,y_pred=train_pred_pw)    # pw
                     accuracy_pph, xx1,xx2,f1_1_pph, xx3,xx4,f1_2_pph = util.eval(y_true=y_train_pph_masked,y_pred=train_pred_pph)   # pph
                     #accuracy_iph, f1_1_iph, f1_2_iph = util.eval(y_true=y_train_iph_masked,y_pred=train_pred_iph)   # iph
@@ -464,7 +475,9 @@ class BiLSTM_CBOW():
                         self.X_p: X_validation,
                         self.y_p_pw: y_validation_pw,
                         self.y_p_pph: y_validation_pph,
-                        self.seq_len_p: len_validation
+                        self.seq_len_p: len_validation,
+                        self.input_keep_prob_p:1.0,
+                        self.output_keep_prob_p:1.0
                     }
                 )
                 # print("valid_pred_pw.shape:",valid_pred_pw.shape)
@@ -630,7 +643,7 @@ if __name__ == "__main__":
 
     # 实际上,X里面的内容都是一样的,所以这里统一使用pw的X来作为所有的X
     # 但是标签是不一样的,所以需要每个都要具体定义
-    X_train = np.asarray(list(df_train_pw['X'].values))[:30000]
+    X_train = np.asarray(list(df_train_pw['X'].values))
     X_validation = np.asarray(list(df_validation_pw['X'].values))
     #print("X_train:\n",X_train)
     #print("X_train.shape\n",X_train.shape)
@@ -638,10 +651,10 @@ if __name__ == "__main__":
     #print("X_validation.shape:\n",X_validation.shape)
 
     # tags
-    y_train_pw = np.asarray(list(df_train_pw['y'].values))[:30000]
+    y_train_pw = np.asarray(list(df_train_pw['y'].values))
     y_validation_pw = np.asarray(list(df_validation_pw['y'].values))
 
-    y_train_pph = np.asarray(list(df_train_pph['y'].values))[:30000]
+    y_train_pph = np.asarray(list(df_train_pph['y'].values))
     y_validation_pph = np.asarray(list(df_validation_pph['y'].values))
 
     #y_train_iph = np.asarray(list(df_train_iph['y'].values))
@@ -649,7 +662,7 @@ if __name__ == "__main__":
 
     # length每一行序列的长度
     # 因为都一样,所以统一使用pw的
-    len_train = np.asarray(list(df_train_pw['sentence_len'].values))[:30000]
+    len_train = np.asarray(list(df_train_pw['sentence_len'].values))
     len_validation = np.asarray(list(df_validation_pw['sentence_len'].values))
     #print("len_train:", len_train.shape)
     #print("len_validation:", len_validation.shape)
