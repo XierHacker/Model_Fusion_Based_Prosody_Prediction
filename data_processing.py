@@ -302,8 +302,9 @@ if __name__=="__main__":
 
     print("[4]-->trans corpus to PPH format......")
     toPPH(inFile="./data/corpus/prosody.txt", outFile="./data/corpus/prosody_pph.txt")
-    print("[5]-->trans corpus to IPH format......")
-    toIPH("./data/corpus/prosody.txt")
+
+    #print("[5]-->trans corpus to IPH format......")
+    #toIPH("./data/corpus/prosody.txt")
 
     print("[6]-->trans corpus_pw to dataset......")
     make_dataset(inFile="./data/corpus/prosody_pw.txt",project_name="temptest",outFile="pw")

@@ -19,8 +19,8 @@ LAMBDA_PW=0.5                           #PW层级正则化系数
 LAMBDA_PPH=0.8                          #PW层级正则化系数
 LAMBDA_IPH=0.5                          #PW层级正则化系数
 
-INPUT_KEEP_PROB=1.0                             #input dropout比率
-OUTPUT_KEEP_PROB=0.5                            #output dropout 比率
+INPUT_KEEP_PROB=0.8                             #input dropout比率
+OUTPUT_KEEP_PROB=0.6                            #output dropout 比率
 
 #can't modify
 CLASS_NUM=3                             #类别数量
