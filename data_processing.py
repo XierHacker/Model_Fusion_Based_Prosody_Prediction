@@ -11,6 +11,8 @@ import numpy as np
 from itertools import chain
 from gensim.models import word2vec
 from parameter import MAX_SENTENCE_SIZE
+from parameter import WORD_EMBEDDING_SIZE
+from parameter import CHAR_EMBEDDING_SIZE
 
 #原始语料转换为不带任何标记的语料,可以训练字向量
 def toCharCorpus(inFile,outFile):
@@ -35,7 +37,7 @@ def toCharCorpus(inFile,outFile):
 #训练字向量并且存储
 def toCharEmbeddings(inFile):
     sentences = word2vec.Text8Corpus(inFile)
-    model = word2vec.Word2Vec(sentences=sentences, size=100)
+    model = word2vec.Word2Vec(sentences=sentences, size=CHAR_EMBEDDING_SIZE)
     # save embeddings file
     if not os.path.exists("./data/embeddings"):
         os.mkdir(path="./data/embeddings")
@@ -65,7 +67,7 @@ def toWordCorpus(inFile,outFile):
 #训练词向量并且存储
 def toWordEmbeddings(inFile):
     sentences = word2vec.Text8Corpus(inFile)
-    model = word2vec.Word2Vec(sentences=sentences, size=100)
+    model = word2vec.Word2Vec(sentences=sentences, size=WORD_EMBEDDING_SIZE)
     # save embeddings file
     if not os.path.exists("./data/embeddings"):
         os.mkdir(path="./data/embeddings")
@@ -186,13 +188,13 @@ def make_component(corpus,name):
     #使用pandas处理,简化流程
     df_data = pd.DataFrame({'sentences': sentences, 'tags': tags}, index=range(len(sentences)))
     df_data['sentence_len'] = df_data['sentences'].apply(lambda sentences: len(sentences))  # 每句话长度
-    #print("max sentence length:",df_data["sentence_len"].max())
+    print("max sentence length:",df_data["sentence_len"].max())
 
     # 得到所有的字,这里的all_words是一个列表,存放了这个语料中所有的词
     all_words = list(chain(*df_data['sentences'].values))
     sr_allwords = pd.Series(data=all_words)     # 2.列表做成pandas的Series
     words = (sr_allwords.value_counts()).index  #字列表.统计每个字出现的频率,同时相当于去重复,得到字的集合(这里还是Serieas的index对象)
-    #print("charactor number:",len(words))
+    print("charactor number:",len(words))
 
     words_id = range(1, len(words) + 1)         #字的id列表,从1开始，因为准备把0作为填充值
     tags = ['x', 'n', 'b']                      #tag列表
