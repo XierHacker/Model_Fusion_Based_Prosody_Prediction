@@ -19,15 +19,20 @@ Using Enhanced Embedding Feature and Model Fusion Approach**](http://www.isca-sp
 
 
 ## steps
+### **----------------------data processing-----------------------**
 #### 1.run `python convert.py`
 >trans .utf-8 raw files to prosody tagged files
 
 #### 2.run `python data_processing.py`
 >trans prosody tagged files to dataset
 
+### **-------------------use models to prediction-----------------**
 #### `cd models`
 >into models
 
-#### 3.run `python bilstm_cbow.py`
->use bilstm_cbow to do prosody_prediction 
+#### run `python bilstm_cbow.py`
+>use bilstm_cbow to do prosody prediction 
 
+
+#### run `python alignment.py`
+>use alignment to do prosody prediction 

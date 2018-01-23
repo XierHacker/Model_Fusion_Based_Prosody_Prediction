@@ -207,6 +207,9 @@ def merge(file1,file2,outFile):
 
 
 if __name__ =="__main__":
+    if not os.path.exists("./data/corpus"):
+        os.mkdir("./data/corpus/")
+
     print("[1]-> Conver raw .utf-8 files to prosody tagged files")
     toProsody(inFile="./data/raw/prosody_test_tag.utf8",outFile="./data/corpus/prosody_test.txt")
     toProsody(inFile="./data/raw/prosody_train_tag.utf8", outFile="./data/corpus/prosody_train.txt")
@@ -220,6 +223,6 @@ if __name__ =="__main__":
     print("[2]->merge prosody_train and prosody_valid files")
     merge(
         file1="./data/corpus/prosody_train.txt",
-        file2="data/corpus/prosody_valid.txt",
+        file2="data/corpus/prosody_test.txt",
         outFile="data/corpus/prosody.txt"
     )
