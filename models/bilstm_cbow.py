@@ -713,8 +713,8 @@ if __name__ == "__main__":
     y_train_pw = np.asarray(list(df_train_pw['y'].values))
     y_validation_pw = np.asarray(list(df_validation_pw['y'].values))
 
-    print("y_train_pw:",y_train_pw)
-    print("y_validation_pw:",y_validation_pw)
+    #print("y_train_pw:",y_train_pw)
+    #print("y_validation_pw:",y_validation_pw)
 
     y_train_pph = np.asarray(list(df_train_pph['y'].values))
     y_validation_pph = np.asarray(list(df_validation_pph['y'].values))
@@ -752,19 +752,19 @@ if __name__ == "__main__":
     # position
     position_train = util.readExtraInfo(file="../data/dataset/position_train_tag.txt")
     position_validation = util.readExtraInfo(file="../data/dataset/position_test_tag.txt")
-    print("shape of position_train:", position_train.shape)
-    print("shape of positon_test:", position_validation.shape)
+    #print("shape of position_train:", position_train.shape)
+    #print("shape of positon_test:", position_validation.shape)
     # accum
     accum_train = util.readExtraInfo(file="../data/dataset/accum_train_tag.txt")
     accum_validation = util.readExtraInfo(file="../data/dataset/accum_test_tag.txt")
-    print("shape of accum_train:", accum_train.shape)
-    print("shape of accum_test:", accum_validation.shape)
+    #print("shape of accum_train:", accum_train.shape)
+    #print("shape of accum_test:", accum_validation.shape)
 
     # accum reverse
     accumR_train = util.readExtraInfo(file="../data/dataset/accum_reverse_train_tag.txt")
     accumR_validation = util.readExtraInfo(file="../data/dataset/accum_reverse_test_tag.txt")
-    print("shape of accumR_train:", accumR_train.shape)
-    print("shape of accumR_test:", accumR_validation.shape)
+    #print("shape of accumR_train:", accumR_train.shape)
+    #print("shape of accumR_test:", accumR_validation.shape)
 
     model = BiLSTM_CBOW()
     model.fit(X_train, y_train, len_train,pos_train,length_train,position_train,

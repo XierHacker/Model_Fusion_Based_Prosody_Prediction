@@ -791,22 +791,22 @@ if __name__ == "__main__":
     #position
     position_train = util.readExtraInfo(file="../data/dataset/position_train_tag.txt")
     position_validation = util.readExtraInfo(file="../data/dataset/position_test_tag.txt")
-    print("shape of position_train:",position_train.shape)
-    print("shape of positon_test:",position_validation.shape)
+    #print("shape of position_train:",position_train.shape)
+    #print("shape of positon_test:",position_validation.shape)
     #accum
     accum_train = util.readExtraInfo(file="../data/dataset/accum_train_tag.txt")
     accum_validation = util.readExtraInfo(file="../data/dataset/accum_test_tag.txt")
-    print("shape of accum_train:", accum_train.shape)
-    print("shape of accum_test:", accum_validation.shape)
+    #print("shape of accum_train:", accum_train.shape)
+    #print("shape of accum_test:", accum_validation.shape)
 
     #accum reverse
     accumR_train = util.readExtraInfo(file="../data/dataset/accum_reverse_train_tag.txt")
     accumR_validation = util.readExtraInfo(file="../data/dataset/accum_reverse_test_tag.txt")
-    print("shape of accumR_train:", accumR_train.shape)
-    print("shape of accumR_test:", accumR_validation.shape)
+    #print("shape of accumR_train:", accumR_train.shape)
+    #print("shape of accumR_test:", accumR_validation.shape)
 
     print("Run Model...\n\n\n")
     model = Alignment_Seq2Seq()
-    model.fit(X_train, y_train, len_train,pos_train,length_train,position_train
+    model.fit(X_train, y_train, len_train,pos_train,length_train,position_train,
               X_validation, y_validation, len_validation, pos_validation,length_validation,position_validation,
               "test", False)
