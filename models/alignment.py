@@ -263,7 +263,7 @@ class Alignment_Seq2Seq():
             self.loss_pw = tf.losses.sparse_softmax_cross_entropy(
                 labels=y_p_pw_masked,
                 logits=logits_pw_masked
-            )+tf.contrib.layers.l2_regularizer(self.lambda_pw)(w_pw)
+            )#+tf.contrib.layers.l2_regularizer(self.lambda_pw)(w_pw)
             # ---------------------------------------------------------------------------------------
 
 
@@ -367,7 +367,7 @@ class Alignment_Seq2Seq():
             self.loss_pph = tf.losses.sparse_softmax_cross_entropy(
                 labels=y_p_pph_masked,
                 logits=logits_pph_masked
-            )+tf.contrib.layers.l2_regularizer(self.lambda_pph)(w_pph)
+            )#+tf.contrib.layers.l2_regularizer(self.lambda_pph)(w_pph)
             # ------------------------------------------------------------------------------------
 
             '''

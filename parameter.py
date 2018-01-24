@@ -1,6 +1,6 @@
 #basic architecture
-CHAR_EMBEDDING_SIZE=1001                 #字嵌入维度
-WORD_EMBEDDING_SIZE=1001                 #词嵌入维度
+CHAR_EMBEDDING_SIZE=512                 #字嵌入维度
+WORD_EMBEDDING_SIZE=512                 #词嵌入维度
 INPUT_SIZE=WORD_EMBEDDING_SIZE           #词嵌入维度
 
 MAX_EPOCH=10                            #最大迭代次数
