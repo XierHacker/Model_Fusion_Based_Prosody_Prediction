@@ -2,11 +2,12 @@
     BILSTM+CBOW
 '''
 
+import sys
+sys.path.append("..")
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
-import tensorflow.contrib.seq2seq as seq2seq
 import time
 import os
 import parameter
@@ -43,7 +44,9 @@ class BiLSTM_CBOW():
 
 
     # forward process and training process
-    def fit(self, X_train, y_train, len_train,X_validation, y_validation, len_validation, name, print_log=True):
+    def fit(self, X_train, y_train, len_train,pos_train,
+            X_validation, y_validation, len_validation, pos_validation,
+            name, print_log=True):
         # ---------------------------------------forward computation--------------------------------------------#
         y_train_pw = y_train[0]
         y_train_pph = y_train[1]
@@ -61,6 +64,13 @@ class BiLSTM_CBOW():
                 name="input_placeholder"
             )
 
+            # pos info placeholder
+            self.pos_p = tf.placeholder(
+                dtype=tf.int32,
+                shape=(None, self.max_sentence_size),
+                name="pos_placeholder"
+            )
+
             self.y_p_pw = tf.placeholder(
                 dtype=tf.int32,
                 shape=(None, self.max_sentence_size),
@@ -71,8 +81,6 @@ class BiLSTM_CBOW():
                 shape=(None, self.max_sentence_size),
                 name="label_placeholder_pph"
             )
-
-
 
             #self.y_p_iph = tf.placeholder(
             #    dtype=tf.int32,
@@ -127,10 +135,20 @@ class BiLSTM_CBOW():
                 name="word_embeddings"
             )
 
+            # pos one-hot
+            self.pos_one_hot = tf.one_hot(
+                indices=self.pos_p,
+                depth=self.pos_num,
+                name="pos_one_hot"
+            )
+            print("shape of pos_one_hot:", self.pos_one_hot.shape)
+
             # -------------------------------------PW-----------------------------------------------------
             # embeded inputs:[batch_size,MAX_TIME_STPES,embedding_size]
             inputs_pw = tf.nn.embedding_lookup(params=self.word_embeddings, ids=self.X_p, name="embeded_input_pw")
             print("shape of inputs_pw:",inputs_pw.shape)
+            inputs_pw = tf.concat(values=[inputs_pw, self.pos_one_hot], axis=2, name="input_pw")
+            print("shape of cancated inputs_pw:", inputs_pw.shape)
 
             # forward part
             en_lstm_forward1_pw = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
@@ -222,6 +240,11 @@ class BiLSTM_CBOW():
             # ----------------------------------PPH--------------------------------------------------
             # embeded inputs:[batch_size,MAX_TIME_STPES,embedding_size]
             inputs_pph = tf.nn.embedding_lookup(params=self.word_embeddings, ids=self.X_p, name="embeded_input_pph")
+            print("shape of input_pph:", inputs_pph.shape)
+            # concat with pos_one_hot
+            inputs_pph = tf.concat(values=[inputs_pph, self.pos_one_hot], axis=2, name="inputs_pph2")
+            print("shape of input_pph:", inputs_pph.shape)
+            #concat pred_normal_one_hot_pw
             inputs_pph = tf.concat(values=[inputs_pph, pred_normal_one_hot_pw], axis=2, name="inputs_pph")
             print("shape of input_pph:", inputs_pph.shape)
 
@@ -442,6 +465,7 @@ class BiLSTM_CBOW():
                             self.y_p_pw: y_train_pw[i * self.batch_size:(i + 1) * self.batch_size],
                             self.y_p_pph: y_train_pph[i * self.batch_size:(i + 1) * self.batch_size],
                             self.seq_len_p: len_train[i * self.batch_size:(i + 1) * self.batch_size],
+                            self.pos_p: pos_train[i * self.batch_size:(i + 1) * self.batch_size],
                             self.input_keep_prob_p:self.input_keep_prob,
                             self.output_keep_prob_p:self.output_keep_prob
                         }
@@ -476,6 +500,7 @@ class BiLSTM_CBOW():
                         self.y_p_pw: y_validation_pw,
                         self.y_p_pph: y_validation_pph,
                         self.seq_len_p: len_validation,
+                        self.pos_p: pos_validation,
                         self.input_keep_prob_p:1.0,
                         self.output_keep_prob_p:1.0
                     }
@@ -519,6 +544,7 @@ class BiLSTM_CBOW():
                     feed_dict={
                         self.X_p: X_validation,
                         self.seq_len_p: len_validation,
+                        self.pos_p: pos_validation,
                         self.input_keep_prob_p:1.0,
                         self.output_keep_prob_p:1.0
                     }
@@ -658,15 +684,8 @@ if __name__ == "__main__":
     #print("len_train:", len_train.shape)
     #print("len_validation:", len_validation.shape)
 
-    # X_train = [X_train_pw, X_train_pph, X_train_iph]
     y_train = [y_train_pw, y_train_pph]
-    # X_validation = [X_validation_pw, X_validation_pph, X_validation_iph]
     y_validation = [y_validation_pw, y_validation_pph]
-
-    #print("X_train_pw:\n",X_train_pw);      print(X_train_pw.shape)
-    #print("X_train_pph:\n", X_train_pph);   print(X_train_pph.shape)
-    # print("X_train_iph:\n", X_train_iph);   print(X_train_iph.shape)
-
     #print("y_train_pw:\n", y_train_pw);
     #print(y_train_pw.shape)
     #print("y_train_pph:\n", y_train_pph);
@@ -674,5 +693,11 @@ if __name__ == "__main__":
     # print("y_train_iph:\n", y_train_iph);
     # print(y_train_iph.shape)
 
+    # Extra Info
+    pos_train = util.readExtraInfo(file="../data/dataset/pos_train_tag.txt")
+    pos_validation = util.readExtraInfo(file="../data/dataset/pos_test_tag.txt")
+
     model = BiLSTM_CBOW()
-    model.fit(X_train, y_train, len_train,X_validation, y_validation, len_validation, "test", False)
+    model.fit(X_train, y_train, len_train,pos_train,
+              X_validation, y_validation, len_validation, pos_validation,
+              "test", False)

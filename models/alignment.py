@@ -185,12 +185,6 @@ class Alignment_Seq2Seq():
             # embeded inputs:[batch_size,MAX_TIME_STPES,embedding_size]
             inputs_pw = tf.nn.embedding_lookup(params=self.word_embeddings, ids=self.X_p, name="embeded_input_pw")
             print("shape of inputs_pw:",inputs_pw.shape)
-            #word_pw:[batch_size,Max_time_steps,word_embedding_size]
-            #word_pw=tf.nn.embedding_lookup(params=self.word_embeddings,ids=self.words_id_p,name="word_pw")
-            #print("shape of word_pw:",word_pw.shape)
-            #concat,[batch_size,Max_time_steps,embedding_size+word_embedding_size]
-            #inputs_pw=tf.concat(values=[inputs_pw,word_pw],axis=2,name="input_pw")
-            #print("input_pw.shape",inputs_pw.shape)
             inputs_pw=tf.concat(values=[inputs_pw,self.pos_one_hot],axis=2,name="input_pw")
             print("shape of cancated inputs_pw:", inputs_pw.shape)
 
@@ -564,15 +558,6 @@ class Alignment_Seq2Seq():
 
                     }
                 )
-                # print("valid_pred_pw.shape:",valid_pred_pw.shape)
-                # print("valid_pred_pph.shape:",valid_pred_pph.shape)
-                # print("valid_pred_iph.shape:",valid_pred_iph.shape)
-
-                #final_pred=util.recover2(X=X_validation,preds_pw=valid_pred_pw,preds_pph=valid_pred_pph,filename=None)
-                #print("final_pred.shape",final_pred.shape)
-
-                #final_true=util.recover2(X=X_validation,preds_pw=y_valid_pw_masked,preds_pph=y_valid_pph_masked,filename=None)
-                #print("final_true.shape",final_true.shape)
 
                 # metrics
                 self.valid_accuracy_pw, self.valid_f1_pw = util.eval(y_true=y_valid_pw_masked,y_pred=valid_pred_pw)
@@ -584,11 +569,27 @@ class Alignment_Seq2Seq():
                 print("Epoch ", epoch, " finished.", "spend ", round((time.time() - start_time) / 60, 2), " mins")
                 self.showInfo(type="training")
                 self.showInfo(type="validation")
-                #print("validation:")
-                #print("ac",ac)
-                #print("f1_1:",f1_1)
-                #print("f1_2:",f1_2)
-                #self.showInfo(type="validation")
+
+                # test:using X_validation_pw
+                test_pred_pw, test_pred_pph = sess.run(
+                    fetches=[pred_pw, pred_pph],
+                    feed_dict={
+                        self.X_p: X_validation,
+                        self.seq_len_p: len_validation,
+                        self.pos_p: pos_validation,
+                        self.input_keep_prob_p: 1.0,
+                        self.output_keep_prob_p: 1.0
+                    }
+                )
+
+                # recover to original corpus txt
+                # shape of valid_pred_pw,valid_pred_pw,valid_pred_pw:[corpus_size*time_stpes]
+                util.recover2(
+                    X=X_validation,
+                    preds_pw=test_pred_pw,
+                    preds_pph=test_pred_pph,
+                    filename="recover_epoch_" + str(epoch) + ".txt"
+                )
 
                 # when we get a new best validation accuracy,we store the model
                 if self.best_validation_loss < self.validation_loss:
@@ -608,25 +609,7 @@ class Alignment_Seq2Seq():
                     # Generates MetaGraphDef.
                     saver.export_meta_graph("./models/" + name + "/bilstm/my-model-10000.meta")
                 print("\n\n")
-                # test:using X_validation_pw
-                test_pred_pw, test_pred_pph = sess.run(
-                    fetches=[pred_pw, pred_pph],
-                    feed_dict={
-                        self.X_p: X_validation,
-                        self.seq_len_p: len_validation,
-                        self.input_keep_prob_p:1.0,
-                        self.output_keep_prob_p:1.0
-                    }
-                )
 
-                # recover to original corpus txt
-                # shape of valid_pred_pw,valid_pred_pw,valid_pred_pw:[corpus_size*time_stpes]
-                util.recover2(
-                    X=X_validation,
-                    preds_pw=test_pred_pw,
-                    preds_pph=test_pred_pph,
-                    filename="recover_epoch_" + str(epoch) + ".txt"
-                )
 
 
     # 返回预测的结果或者准确率,y not None的时候返回准确率,y ==None的时候返回预测值
@@ -741,15 +724,8 @@ if __name__ == "__main__":
     #print("len_train:", len_train.shape)
     #print("len_validation:", len_validation.shape)
 
-    # X_train = [X_train_pw, X_train_pph, X_train_iph]
     y_train = [y_train_pw, y_train_pph]
-    # X_validation = [X_validation_pw, X_validation_pph, X_validation_iph]
     y_validation = [y_validation_pw, y_validation_pph]
-
-    # print("X_train_pw:\n",X_train_pw);      print(X_train_pw.shape)
-    # print("X_train_pph:\n", X_train_pph);   print(X_train_pph.shape)
-    # print("X_train_iph:\n", X_train_iph);   print(X_train_iph.shape)
-
     # print("y_train_pw:\n", y_train_pw);
     # print(y_train_pw.shape)
     # print("y_train_pph:\n", y_train_pph);
