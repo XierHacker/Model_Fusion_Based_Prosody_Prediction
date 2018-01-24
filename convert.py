@@ -173,8 +173,8 @@ def toWordLength(inFile_train,inFile_valid,inFile_test):
     f_test_out.close()
 
 #word position info
-def toWordPosition(inFile_train,inFile_valid,inFile_test):
-    # ---------------------------------------生成position标注文件-----------------------------------------#
+def toWordAccum(inFile_train,inFile_valid,inFile_test):
+    # ---------------------------------------生成accum标注文件-----------------------------------------#
     # training corpus
     f_train_in = open(file=inFile_train, encoding="utf-8")
     doc_position = ""
@@ -191,11 +191,11 @@ def toWordPosition(inFile_train,inFile_valid,inFile_test):
             doc_position += "\n"
             doc_ids += "\n"
     # save 2 files
-    f_train_out = open(file="./data/dataset/position_train.txt", mode="w", encoding="utf-8")
+    f_train_out = open(file="./data/dataset/accum_train.txt", mode="w", encoding="utf-8")
     f_train_out.write(doc_position)
     f_train_out.close()
 
-    f_train_out = open(file="./data/dataset/position_train_tag.txt", mode="w", encoding="utf-8")
+    f_train_out = open(file="./data/dataset/accum_train_tag.txt", mode="w", encoding="utf-8")
     f_train_out.write(doc_ids)
     f_train_out.close()
 
@@ -213,6 +213,109 @@ def toWordPosition(inFile_train,inFile_valid,inFile_test):
         else:
             doc_position += "\n"
             doc_ids += "\n"
+    f_test_out = open(file="./data/dataset/accum_test.txt", mode="w", encoding="utf-8")
+    f_test_out.write(doc_position)
+    f_test_out.close()
+
+    f_test_out = open(file="./data/dataset/accum_test_tag.txt", mode="w", encoding="utf-8")
+    f_test_out.write(doc_ids)
+    f_test_out.close()
+
+def toWordAccumReverse(inFile_train,inFile_valid,inFile_test):
+    # ---------------------------------------生成accum标注文件-----------------------------------------#
+    # training corpus
+    f_train_in = open(file=inFile_train, encoding="utf-8")
+    doc_position = ""
+    doc_ids = ""
+    lines_train = f_train_in.readlines()
+    for line_train in lines_train:
+        line_train = line_train.strip()
+        line_train_list = line_train.split(sep="\t")
+        # print("line_train_list:",line_train_list)
+        if (line_train_list[0] != ""):
+            doc_position += (line_train_list[0] + "/" + line_train_list[5])
+            doc_ids += (line_train_list[5] + " ")
+        else:
+            doc_position += "\n"
+            doc_ids += "\n"
+    # save 2 files
+    f_train_out = open(file="./data/dataset/accum_reverse_train.txt", mode="w", encoding="utf-8")
+    f_train_out.write(doc_position)
+    f_train_out.close()
+
+    f_train_out = open(file="./data/dataset/accum_reverse_train_tag.txt", mode="w", encoding="utf-8")
+    f_train_out.write(doc_ids)
+    f_train_out.close()
+
+    # test corpus
+    f_test_in = open(file=inFile_test, encoding="utf-8")
+    doc_position = ""
+    doc_ids = ""
+    lines_test = f_test_in.readlines()
+    for line_test in lines_test:
+        line_test = line_test.strip()
+        line_test_list = line_test.split(sep="\t")
+        if (line_test_list[0] != ""):
+            doc_position += (line_test_list[0] + "/" + line_test_list[5])
+            doc_ids += (line_test_list[5] + " ")
+        else:
+            doc_position += "\n"
+            doc_ids += "\n"
+    f_test_out = open(file="./data/dataset/accum_reverse_test.txt", mode="w", encoding="utf-8")
+    f_test_out.write(doc_position)
+    f_test_out.close()
+
+    f_test_out = open(file="./data/dataset/accum_reverse_test_tag.txt", mode="w", encoding="utf-8")
+    f_test_out.write(doc_ids)
+    f_test_out.close()
+
+
+def toWordPosition(inFile_train,inFile_valid,inFile_test):
+    # ---------------------------------------生成position标注文件-----------------------------------------#
+    # training corpus
+    f_train_in = open(file=inFile_train, encoding="utf-8")
+    doc_position = ""
+    doc_ids = ""
+    lines_train = f_train_in.readlines()
+    i=1
+    for line_train in lines_train:
+        line_train = line_train.strip()
+        line_train_list = line_train.split(sep="\t")
+        # print("line_train_list:",line_train_list)
+        if (line_train_list[0] != ""):
+            doc_position += (line_train_list[0] + "/" + str(i))
+            doc_ids += (str(i) + " ")
+            i+=1
+        else:
+            doc_position += "\n"
+            doc_ids += "\n"
+            i=1
+    # save 2 files
+    f_train_out = open(file="./data/dataset/position_train.txt", mode="w", encoding="utf-8")
+    f_train_out.write(doc_position)
+    f_train_out.close()
+
+    f_train_out = open(file="./data/dataset/position_train_tag.txt", mode="w", encoding="utf-8")
+    f_train_out.write(doc_ids)
+    f_train_out.close()
+
+    # test corpus
+    f_test_in = open(file=inFile_test, encoding="utf-8")
+    doc_position = ""
+    doc_ids = ""
+    lines_test = f_test_in.readlines()
+    i=1
+    for line_test in lines_test:
+        line_test = line_test.strip()
+        line_test_list = line_test.split(sep="\t")
+        if (line_test_list[0] != ""):
+            doc_position += (line_test_list[0] + "/" + str(i))
+            doc_ids += (str(i) + " ")
+            i+=1
+        else:
+            doc_position += "\n"
+            doc_ids += "\n"
+            i=1
     f_test_out = open(file="./data/dataset/position_test.txt", mode="w", encoding="utf-8")
     f_test_out.write(doc_position)
     f_test_out.close()
@@ -220,9 +323,6 @@ def toWordPosition(inFile_train,inFile_valid,inFile_test):
     f_test_out = open(file="./data/dataset/position_test_tag.txt", mode="w", encoding="utf-8")
     f_test_out.write(doc_ids)
     f_test_out.close()
-
-def toWordReversePosition(file):
-    pass
 
 def merge(file1,file2,outFile):
     doc=""
@@ -267,8 +367,19 @@ if __name__ =="__main__":
             inFile_valid="./data/raw/prosody_valid_tag.rst",
             inFile_test="./data/raw/prosody_test_tag.utf8"
      )
-    print("[5]->generate position files")
-    toWordPosition(inFile_train="./data/raw/prosody_train_tag.utf8",
+    print("[5]->generate accmulate files")
+    toWordAccum(inFile_train="./data/raw/prosody_train_tag.utf8",
                  inFile_valid="./data/raw/prosody_valid_tag.rst",
                  inFile_test="./data/raw/prosody_test_tag.utf8"
-                 )
+    )
+    print("[6]->generate accmulate reverse files")
+    toWordAccumReverse(inFile_train="./data/raw/prosody_train_tag.utf8",
+                inFile_valid="./data/raw/prosody_valid_tag.rst",
+                inFile_test="./data/raw/prosody_test_tag.utf8"
+    )
+    print("[7]->generate position files")
+    toWordPosition(inFile_train="./data/raw/prosody_train_tag.utf8",
+                inFile_valid="./data/raw/prosody_valid_tag.rst",
+                inFile_test="./data/raw/prosody_test_tag.utf8"
+    )
+

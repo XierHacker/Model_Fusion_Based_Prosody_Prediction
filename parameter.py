@@ -10,13 +10,13 @@ HIDDEN_UNITS_NUM2=256                   #隐藏层2结点数量
 BATCH_SIZE=100                          #batch大小
 
 #learning rate
-LEARNING_RATE=0.001                      #学习率
+LEARNING_RATE=0.003                      #学习率
 DECAY=0.85                              #衰减系数
 
 #Weaken Overfitting
 DROPOUT_RATE=0.5                        #dropout 比率
-LAMBDA_PW=0.5                           #PW层级正则化系数
-LAMBDA_PPH=0.8                          #PW层级正则化系数
+LAMBDA_PW=0.05                           #PW层级正则化系数
+LAMBDA_PPH=0.08                          #PW层级正则化系数
 LAMBDA_IPH=0.5                          #PW层级正则化系数
 
 INPUT_KEEP_PROB=1.0                             #input dropout比率

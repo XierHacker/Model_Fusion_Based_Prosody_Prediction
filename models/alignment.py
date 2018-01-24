@@ -84,8 +84,8 @@ class Alignment_Seq2Seq():
         return decoder_outputs
 
     # forward process and training process
-    def fit(self, X_train, y_train, len_train, pos_train,length_train,
-            X_validation, y_validation, len_validation, pos_validaton,length_validation,
+    def fit(self, X_train, y_train, len_train, pos_train,length_train,position_train,
+            X_validation, y_validation, len_validation, pos_validaton,length_validation,position_validation,
             name, print_log=True):
         # ---------------------------------------forward computation--------------------------------------------#
         y_train_pw = y_train[0]
@@ -103,6 +103,7 @@ class Alignment_Seq2Seq():
                 shape=(None, self.max_sentence_size),
                 name="input_placeholder"
             )
+
             #pos info placeholder
             self.pos_p=tf.placeholder(
                 dtype=tf.int32,
@@ -112,6 +113,13 @@ class Alignment_Seq2Seq():
 
             # length info placeholder
             self.length_p = tf.placeholder(
+                dtype=tf.int32,
+                shape=(None, self.max_sentence_size),
+                name="length_placeholder"
+            )
+
+            # position info placeholder
+            self.position_p = tf.placeholder(
                 dtype=tf.int32,
                 shape=(None, self.max_sentence_size),
                 name="length_placeholder"
@@ -197,12 +205,20 @@ class Alignment_Seq2Seq():
             )
             print("shape of length_one_hot:", self.length_one_hot.shape)
 
+            # position one-hot
+            self.position_one_hot = tf.one_hot(
+                indices=self.position_p,
+                depth=self.max_sentence_size,
+                name="pos_one_hot"
+            )
+            print("shape of position_one_hot:", self.position_one_hot.shape)
+
             # -------------------------------------PW-----------------------------------------------------
             # embeded inputs:[batch_size,MAX_TIME_STPES,embedding_size]
             inputs_pw = tf.nn.embedding_lookup(params=self.word_embeddings, ids=self.X_p, name="embeded_input_pw")
             print("shape of inputs_pw:",inputs_pw.shape)
             inputs_pw=tf.concat(
-                values=[inputs_pw,self.pos_one_hot,self.length_one_hot],
+                values=[inputs_pw,self.pos_one_hot,self.length_one_hot,self.position_one_hot],
                 axis=2,
                 name="input_pw"
             )
@@ -310,7 +326,7 @@ class Alignment_Seq2Seq():
             print("input_pph.shape", inputs_pph.shape)
             #concat all information
             inputs_pph=tf.concat(
-                values=[inputs_pph,self.pos_one_hot,self.length_one_hot,pred_normal_one_hot_pw],
+                values=[inputs_pph,self.pos_one_hot,self.length_one_hot,self.position_one_hot,pred_normal_one_hot_pw],
                 axis=2,
                 name="inputs_pph"
             )
@@ -541,6 +557,7 @@ class Alignment_Seq2Seq():
                             self.seq_len_p: len_train[i * self.batch_size:(i + 1) * self.batch_size],
                             self.pos_p:pos_train[i * self.batch_size:(i + 1) * self.batch_size],
                             self.length_p:length_train[i * self.batch_size:(i + 1) * self.batch_size],
+                            self.position_p:position_train[i * self.batch_size:(i + 1) * self.batch_size],
                             self.input_keep_prob_p:self.input_keep_prob,
                             self.output_keep_prob_p:self.output_keep_prob
                         }
@@ -577,6 +594,7 @@ class Alignment_Seq2Seq():
                         self.seq_len_p: len_validation,
                         self.pos_p:pos_validation,
                         self.length_p:length_validation,
+                        self.position_p:position_validation,
                         self.input_keep_prob_p:1.0,
                         self.output_keep_prob_p:1.0
                     }
@@ -600,6 +618,7 @@ class Alignment_Seq2Seq():
                         self.seq_len_p: len_validation,
                         self.pos_p: pos_validation,
                         self.length_p:length_validation,
+                        self.position_p:position_validation,
                         self.input_keep_prob_p: 1.0,
                         self.output_keep_prob_p: 1.0
                     }
@@ -769,8 +788,25 @@ if __name__ == "__main__":
     #print("shape of length_train:",length_train.shape)
     #print("shape of length_test:",length_validation.shape)
 
+    #position
+    position_train = util.readExtraInfo(file="../data/dataset/position_train_tag.txt")
+    position_validation = util.readExtraInfo(file="../data/dataset/position_test_tag.txt")
+    print("shape of position_train:",position_train.shape)
+    print("shape of positon_test:",position_validation.shape)
+    #accum
+    accum_train = util.readExtraInfo(file="../data/dataset/accum_train_tag.txt")
+    accum_validation = util.readExtraInfo(file="../data/dataset/accum_test_tag.txt")
+    print("shape of accum_train:", accum_train.shape)
+    print("shape of accum_test:", accum_validation.shape)
+
+    #accum reverse
+    accumR_train = util.readExtraInfo(file="../data/dataset/accum_reverse_train_tag.txt")
+    accumR_validation = util.readExtraInfo(file="../data/dataset/accum_reverse_test_tag.txt")
+    print("shape of accumR_train:", accumR_train.shape)
+    print("shape of accumR_test:", accumR_validation.shape)
+
     print("Run Model...\n\n\n")
     model = Alignment_Seq2Seq()
-    model.fit(X_train, y_train, len_train,pos_train,length_train,
-              X_validation, y_validation, len_validation, pos_validation,length_validation,
+    model.fit(X_train, y_train, len_train,pos_train,length_train,position_train
+              X_validation, y_validation, len_validation, pos_validation,length_validation,position_validation,
               "test", False)
