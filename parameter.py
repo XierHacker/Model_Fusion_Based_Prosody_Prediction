@@ -23,7 +23,9 @@ INPUT_KEEP_PROB=1.0                             #input dropout比率
 OUTPUT_KEEP_PROB=1.0                            #output dropout 比率
 
 #can't modify
-CLASS_NUM=2                             #类别数量(N,B)
-MAX_SENTENCE_SIZE=28                    #固定句子长度为30 (从整个数据集得来)
+CLASS_NUM=2                             #类别数量2(N,B)
+POS_NUM=37                              #词性信息数量
+LEN_NUM=8                               #长度信息数量
+MAX_SENTENCE_SIZE=28                    #固定句子长度为28 (从整个数据集得来)
 TIMESTEP_SIZE=MAX_SENTENCE_SIZE         #LSTM的time_step应该和句子长度一致
 WORD_VOCAB_SIZE=46938                   # 样本中不同字的个数+1(padding 0)，根据处理数据的时候得到

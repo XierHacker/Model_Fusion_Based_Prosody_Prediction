@@ -1,7 +1,8 @@
 '''
     model with CWS and pos information
 '''
-
+import sys
+sys.path.append("..")
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -23,6 +24,7 @@ class Alignment_Seq2Seq():
         self.max_epoch = parameter.MAX_EPOCH
 
         self.class_num = parameter.CLASS_NUM
+        self.pos_num=parameter.POS_NUM
         self.hidden_units_num = parameter.HIDDEN_UNITS_NUM
         self.hidden_units_num2 = parameter.HIDDEN_UNITS_NUM2
         self.layer_num = parameter.LAYER_NUM
@@ -41,8 +43,8 @@ class Alignment_Seq2Seq():
         self.input_keep_prob=parameter.INPUT_KEEP_PROB
         self.output_keep_prob=parameter.OUTPUT_KEEP_PROB
 
+
     # encoder,传入是前向和后向的cell,还有inputs
-    # 输出是
     def encoder(self, cell_forward, cell_backward, inputs, seq_length, scope_name):
         outputs, states = tf.nn.bidirectional_dynamic_rnn(
             cell_fw=cell_forward,
@@ -52,7 +54,6 @@ class Alignment_Seq2Seq():
             dtype=tf.float32,
             scope=scope_name
         )
-
         outputs_forward = outputs[0]  # shape of h is [batch_size, max_time, cell_fw.output_size]
         outputs_backward = outputs[1]  # shape of h is [batch_size, max_time, cell_bw.output_size]
         states_forward = states[0]  # .c:[batch_size,num_units]   .h:[batch_size,num_units]
@@ -65,8 +66,10 @@ class Alignment_Seq2Seq():
         state_c_concat=tf.concat(values=[states_forward.c,states_backward.c],axis=1,name="state_c_concat")
         #print("state_c_concat:",state_c_concat)
         encoder_states=rnn.LSTMStateTuple(c=state_c_concat,h=state_h_concat)
+
         return encoder_outputs, encoder_states
 
+    #decoder
     def decoder(self, cell, initial_state, inputs, scope_name):
         # outputs:[batch_size,time_steps,hidden_size*2]
         outputs, states = tf.nn.dynamic_rnn(
@@ -80,7 +83,9 @@ class Alignment_Seq2Seq():
         return decoder_outputs
 
     # forward process and training process
-    def fit(self, X_train, y_train, len_train, X_validation, y_validation, len_validation, name, print_log=True):
+    def fit(self, X_train, y_train, len_train, pos_train,
+            X_validation, y_validation, len_validation, pos_validaton,
+            name, print_log=True):
         # ---------------------------------------forward computation--------------------------------------------#
         y_train_pw = y_train[0]
         y_train_pph = y_train[1]
@@ -97,7 +102,12 @@ class Alignment_Seq2Seq():
                 shape=(None, self.max_sentence_size),
                 name="input_placeholder"
             )
-
+            #pos info placeholder
+            self.pos_p=tf.placeholder(
+                dtype=tf.int32,
+                shape=(None,self.max_sentence_size),
+                name="pos_placeholder"
+            )
 
             self.y_p_pw = tf.placeholder(
                 dtype=tf.int32,
@@ -109,6 +119,7 @@ class Alignment_Seq2Seq():
                 shape=(None, self.max_sentence_size),
                 name="label_placeholder_pph"
             )
+
             #self.y_p_iph = tf.placeholder(
             #    dtype=tf.int32,
             #    shape=(None, self.max_sentence_size),
@@ -150,15 +161,25 @@ class Alignment_Seq2Seq():
             #    name="y_p_iph_masked"
             #)
 
-            # embeddings
+            # char embeddings
             #self.embeddings = tf.Variable(
             #    initial_value=tf.zeros(shape=(self.vocab_size, self.embedding_size), dtype=tf.float32),
             #    name="embeddings"
             #)
+
+            #word embeddings
             self.word_embeddings=tf.Variable(
                 initial_value=tf.zeros(shape=(self.word_vocab_size,self.word_embedding_size),dtype=tf.float32),
                 name="word_embeddings"
             )
+
+            #pos one-hot
+            self.pos_one_hot=tf.one_hot(
+                indices=self.pos_p,
+                depth=self.pos_num,
+                name="pos_one_hot"
+            )
+            print("shape of pos_one_hot:",self.pos_one_hot.shape)
 
             # -------------------------------------PW-----------------------------------------------------
             # embeded inputs:[batch_size,MAX_TIME_STPES,embedding_size]
@@ -170,6 +191,8 @@ class Alignment_Seq2Seq():
             #concat,[batch_size,Max_time_steps,embedding_size+word_embedding_size]
             #inputs_pw=tf.concat(values=[inputs_pw,word_pw],axis=2,name="input_pw")
             #print("input_pw.shape",inputs_pw.shape)
+            inputs_pw=tf.concat(values=[inputs_pw,self.pos_one_hot],axis=2,name="input_pw")
+            print("shape of cancated inputs_pw:", inputs_pw.shape)
 
             # encoder cells
             # forward part
@@ -270,16 +293,13 @@ class Alignment_Seq2Seq():
             # ----------------------------------PPH--------------------------------------------------
             # embeded inputs:[batch_size,MAX_TIME_STPES,embedding_size]
             inputs_pph = tf.nn.embedding_lookup(params=self.word_embeddings, ids=self.X_p, name="embeded_input_pph")
-            # word_pph:[batch_size,Max_time_steps,word_embedding_size]
-            #word_pph = tf.nn.embedding_lookup(params=self.word_embeddings, ids=self.words_id_p, name="word_pph")
-            # print("shape of word_pph:", word_pph.shape)
-            # concat,[batch_size,Max_time_steps,embedding_size+word_embedding_size]
-            #inputs_pph = tf.concat(values=[inputs_pph, word_pph], axis=2, name="input_pph")
-            # print("input_pph.shape", inputs_pph.shape)
+            print("input_pph.shape", inputs_pph.shape)
+            #concat with pos_one_hot
+            inputs_pph=tf.concat(values=[inputs_pph,self.pos_one_hot],axis=2,name="inputs_pph2")
+            print("shape of input_pph:", inputs_pph.shape)
             # shape of inputs[batch_size,max_time_stpes,embeddings_dims+class_num]
-            inputs_pph = tf.concat(values=[inputs_pph, pred_normal_one_hot_pw], axis=2, name="inputs_pph2")
-            # print("shape of input_pph:", inputs_pph.shape)
-
+            inputs_pph = tf.concat(values=[inputs_pph, pred_normal_one_hot_pw], axis=2, name="inputs_pph")
+            print("shape of input_pph:", inputs_pph.shape)
 
             # encoder cells
             # forward part
@@ -503,6 +523,7 @@ class Alignment_Seq2Seq():
                             self.y_p_pw: y_train_pw[i * self.batch_size:(i + 1) * self.batch_size],
                             self.y_p_pph: y_train_pph[i * self.batch_size:(i + 1) * self.batch_size],
                             self.seq_len_p: len_train[i * self.batch_size:(i + 1) * self.batch_size],
+                            self.pos_p:pos_train[i * self.batch_size:(i + 1) * self.batch_size],
                             self.input_keep_prob_p:self.input_keep_prob,
                             self.output_keep_prob_p:self.output_keep_prob
                         }
@@ -537,6 +558,7 @@ class Alignment_Seq2Seq():
                         self.y_p_pw: y_validation_pw,
                         self.y_p_pph: y_validation_pph,
                         self.seq_len_p: len_validation,
+                        self.pos_p:pos_validation,
                         self.input_keep_prob_p:1.0,
                         self.output_keep_prob_p:1.0
 
@@ -605,6 +627,7 @@ class Alignment_Seq2Seq():
                     preds_pph=test_pred_pph,
                     filename="recover_epoch_" + str(epoch) + ".txt"
                 )
+
 
     # 返回预测的结果或者准确率,y not None的时候返回准确率,y ==None的时候返回预测值
     def pred(self, name, X, y=None, ):
@@ -681,6 +704,7 @@ class Alignment_Seq2Seq():
 # train && test
 if __name__ == "__main__":
     # 读数据
+    print("Loading Data...")
     # pw
     df_train_pw = pd.read_pickle(path="../data/dataset/temptest/pw_summary_train.pkl")
     df_validation_pw = pd.read_pickle(path="../data/dataset/temptest/pw_summary_validation.pkl")
@@ -696,11 +720,10 @@ if __name__ == "__main__":
     # 但是标签是不一样的,所以需要每个都要具体定义
     X_train = np.asarray(list(df_train_pw['X'].values))
     X_validation = np.asarray(list(df_validation_pw['X'].values))
-    print("X_train:",X_train)
-    print("X_train.shape",X_train.shape)
-    print("X_validation:",X_validation)
-    print("X_validation.shape:",X_validation.shape)
-
+    #print("X_train:",X_train)
+    #print("X_train.shape",X_train.shape)
+    #print("X_validation:",X_validation)
+    #print("X_validation.shape:",X_validation.shape)
     # tags
     y_train_pw = np.asarray(list(df_train_pw['y'].values))
     y_validation_pw = np.asarray(list(df_validation_pw['y'].values))
@@ -715,8 +738,8 @@ if __name__ == "__main__":
     # 因为都一样,所以统一使用pw的
     len_train = np.asarray(list(df_train_pw['sentence_len'].values))
     len_validation = np.asarray(list(df_validation_pw['sentence_len'].values))
-    print("len_train:", len_train.shape)
-    print("len_validation:", len_validation.shape)
+    #print("len_train:", len_train.shape)
+    #print("len_validation:", len_validation.shape)
 
     # X_train = [X_train_pw, X_train_pph, X_train_iph]
     y_train = [y_train_pw, y_train_pph]
@@ -734,5 +757,14 @@ if __name__ == "__main__":
     # print("y_train_iph:\n", y_train_iph);
     # print(y_train_iph.shape)
 
+    #Extra Info
+    pos_train=util.readExtraInfo(file="../data/dataset/pos_train_tag.txt")
+    pos_validation=util.readExtraInfo(file="../data/dataset/pos_test_tag.txt")
+    #print("pos_train.shape",pos_train.shape)
+    #print("pos_validation.shape",pos_validation.shape)
+
+    print("Run Model...\n\n\n")
     model = Alignment_Seq2Seq()
-    model.fit(X_train, y_train, len_train,X_validation, y_validation, len_validation, "test", False)
+    model.fit(X_train, y_train, len_train,pos_train,
+              X_validation, y_validation, len_validation, pos_validation,
+              "test", False)
