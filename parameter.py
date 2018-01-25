@@ -1,26 +1,25 @@
 #basic architecture
-CHAR_EMBEDDING_SIZE=256                 #字嵌入维度
-WORD_EMBEDDING_SIZE=256                 #词嵌入维度
+CHAR_EMBEDDING_SIZE=128                 #字嵌入维度
+WORD_EMBEDDING_SIZE=128                 #词嵌入维度
 INPUT_SIZE=WORD_EMBEDDING_SIZE           #词嵌入维度
 
-MAX_EPOCH=10                            #最大迭代次数
+MAX_EPOCH=3                            #最大迭代次数
 LAYER_NUM=2                             #lstm层数2
 HIDDEN_UNITS_NUM=256                    #隐藏层结点数量
 HIDDEN_UNITS_NUM2=256                   #隐藏层2结点数量
-BATCH_SIZE=100                          #batch大小
+BATCH_SIZE=50                          #batch大小
 
 #learning rate
-LEARNING_RATE=0.003                      #学习率
-DECAY=0.85                              #衰减系数
+LEARNING_RATE=0.0018                      #学习率
+DECAY=0.05                                #衰减系数
 
 #Weaken Overfitting
-DROPOUT_RATE=0.5                          #dropout 比率
+KEEP_PROB=0.5                             #全连接 dropout 比率
 INPUT_KEEP_PROB=1.0                       #rnn input  dropout比率
-OUTPUT_KEEP_PROB=1.0                      #rnn output dropout 比率
+OUTPUT_KEEP_PROB=0.5                      #rnn output dropout 比率
 LAMBDA_PW=0.001                           #PW层级正则化系数
-LAMBDA_PPH=0.005                          #PW层级正则化系数
+LAMBDA_PPH=0.001                          #PW层级正则化系数
 LAMBDA_IPH=0.005                          #PW层级正则化系数
-
 
 
 #can't modify
