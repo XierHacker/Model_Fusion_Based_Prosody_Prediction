@@ -41,6 +41,7 @@ class BiLSTM_CBOW():
         self.lambda_pph=parameter.LAMBDA_PPH
         self.lambda_iph=parameter.LAMBDA_IPH
 
+        self.keep_prob = parameter.KEEP_PROB
         self.input_keep_prob=parameter.INPUT_KEEP_PROB
         self.output_keep_prob=parameter.OUTPUT_KEEP_PROB
 
@@ -106,6 +107,7 @@ class BiLSTM_CBOW():
             #    name="label_placeholder_iph"
             #)
             # dropout 占位
+            self.keep_prob_p = tf.placeholder(dtype=tf.float32, shape=[], name="keep_prob_p")
             self.input_keep_prob_p = tf.placeholder(dtype=tf.float32, shape=[], name="input_keep_prob_p")
             self.output_keep_prob_p=tf.placeholder(dtype=tf.float32, shape=[], name="output_keep_prob_p")
 
@@ -227,6 +229,9 @@ class BiLSTM_CBOW():
             h_pw=tf.reshape(tensor=h_pw,shape=(-1,self.hidden_units_num*2),name="h_pw")
             print("h_pw.shape",h_pw.shape)
 
+            # 全连接dropout
+            h_pw = tf.nn.dropout(x=h_pw, keep_prob=self.keep_prob_p, name="dropout_h_pw")
+
             # fully connect layer(projection)
             w_pw = tf.Variable(
                 initial_value=tf.random_normal(shape=(self.hidden_units_num*2, self.class_num)),
@@ -325,6 +330,9 @@ class BiLSTM_CBOW():
             # concat final outputs [batch_size, max_time, cell_fw.output_size*2]
             h_pph = tf.concat(values=[outputs_forward_pph, outputs_backward_pph], axis=2)
             h_pph = tf.reshape(tensor=h_pph, shape=(-1, self.hidden_units_num * 2), name="h_pph")
+
+            # 全连接dropout
+            h_pph = tf.nn.dropout(x=h_pph, keep_prob=self.keep_prob_p, name="dropout_h_pph")
 
             # fully connect layer(projection)
             w_pph = tf.Variable(
@@ -505,6 +513,8 @@ class BiLSTM_CBOW():
                 #self.c1_f_iph = [];
                 #self.c2_f_iph = []
 
+                lrs = []
+
                 # mini batch
                 for i in range(0, (train_Size // self.batch_size)):
                     #注意:这里获取的都是mask之后的值
@@ -521,11 +531,12 @@ class BiLSTM_CBOW():
                             self.pos_p: pos_train[i * self.batch_size:(i + 1) * self.batch_size],
                             self.length_p: length_train[i * self.batch_size:(i + 1) * self.batch_size],
                             self.position_p: position_train[i * self.batch_size:(i + 1) * self.batch_size],
+                            self.keep_prob_p: self.keep_prob,
                             self.input_keep_prob_p:self.input_keep_prob,
                             self.output_keep_prob_p:self.output_keep_prob
                         }
                     )
-                    print("lr:",lr)
+                    lrs.append(lr)
 
                     # loss
                     self.train_losses.append(train_loss)
@@ -546,6 +557,7 @@ class BiLSTM_CBOW():
                     #self.c1_f_iph.append(f1_1_iph);
                     #self.c2_f_iph.append(f1_2_iph)
 
+                print("learning rate:", sum(lrs) / len(lrs))
                 # validation in every epoch
                 self.validation_loss, y_valid_pw_masked,y_valid_pph_masked,\
                 valid_pred_pw, valid_pred_pph = sess.run(
@@ -559,6 +571,7 @@ class BiLSTM_CBOW():
                         self.pos_p: pos_validation,
                         self.length_p: length_validation,
                         self.position_p: position_validation,
+                        self.keep_prob_p: 1.0,
                         self.input_keep_prob_p:1.0,
                         self.output_keep_prob_p:1.0
                     }
@@ -605,6 +618,7 @@ class BiLSTM_CBOW():
                         self.pos_p: pos_validation,
                         self.length_p: length_validation,
                         self.position_p: position_validation,
+                        self.keep_prob_p: 1.0,
                         self.input_keep_prob_p:1.0,
                         self.output_keep_prob_p:1.0
                     }
