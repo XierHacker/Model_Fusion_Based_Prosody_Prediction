@@ -37,11 +37,41 @@ def toCharCorpus(inFile,outFile):
 #训练字向量并且存储
 def toCharEmbeddings(inFile):
     sentences = word2vec.Text8Corpus(inFile)
-    model = word2vec.Word2Vec(sentences=sentences, size=CHAR_EMBEDDING_SIZE)
+    model = word2vec.Word2Vec(
+        sentences=sentences,
+        size=CHAR_EMBEDDING_SIZE,           #词向量维度
+        window=5,                           #window大小
+        min_count=0,                        #频率小于这个值被忽略
+        sg=0,                               #sg==0->cbow;   sg==1->skip-gram
+        hs=1,                               #use hierarchical softmax
+        negative=5,                         #use negative sampling
+        sorted_vocab=1,                     #按照词频率从高到低排序
+    )
     # save embeddings file
     if not os.path.exists("./data/embeddings"):
         os.mkdir(path="./data/embeddings")
     model.wv.save_word2vec_format("./data/embeddings/char_vec.txt", binary=False)
+    #生成char和id相互索引的.csv文件
+    if os.path.exists("./data/embeddings/char_vec.txt"):
+        f=open(file="./data/embeddings/char_vec.txt",encoding="utf-8")
+        lines = f.readlines()
+        # first row is info
+        info = lines[0].strip()
+        info_list = info.split(sep=" ")
+        vocab_size = int(info_list[0])
+        embedding_dims = int(info_list[1])
+        chars=[]
+        ids=[]
+        for i in range(1,vocab_size+1):
+            embed=lines[i].strip()
+            embed_list=embed.split(sep=" ")
+            chars.append(embed_list[0])
+            ids.append(i)
+        pd.DataFrame(data={"chars": chars, "id": ids}). \
+            to_csv(path_or_buf="./data/dataset/chars_ids.csv", index=False, encoding="utf_8")
+    else:
+        print("there is no embedings files")
+
 
 
 #原始语料转换为不带任何标记的语料,可以训练词向量
@@ -66,12 +96,43 @@ def toWordCorpus(inFile,outFile):
 
 #训练词向量并且存储
 def toWordEmbeddings(inFile):
+    #--------------------------------train word embeddings---------------------------------
     sentences = word2vec.Text8Corpus(inFile)
-    model = word2vec.Word2Vec(sentences=sentences, size=WORD_EMBEDDING_SIZE)
+    model = word2vec.Word2Vec(
+        sentences=sentences,
+        size=WORD_EMBEDDING_SIZE,       # 词向量维度
+        window=5,                       # window大小
+        min_count=0,                    # 频率小于这个值被忽略
+        sg=0,                           # sg==0->cbow;   sg==1->skip-gram
+        hs=1,                           # use hierarchical softmax
+        negative=5,                     # use negative sampling
+        sorted_vocab=1,                 # 按照词频率从高到低排序
+    )
     # save embeddings file
     if not os.path.exists("./data/embeddings"):
         os.mkdir(path="./data/embeddings")
     model.wv.save_word2vec_format("./data/embeddings/word_vec.txt", binary=False)
+
+    # ----------------------------------生成word和id相互索引的.csv文件-------------------------
+    if os.path.exists("./data/embeddings/word_vec.txt"):
+        f = open(file="./data/embeddings/word_vec.txt", encoding="utf-8")
+        lines = f.readlines()
+        # first row is info
+        info = lines[0].strip()
+        info_list = info.split(sep=" ")
+        vocab_size = int(info_list[0])
+        embedding_dims = int(info_list[1])
+        words = []
+        ids = []
+        for i in range(1, vocab_size + 1):
+            embed = lines[i].strip()
+            embed_list = embed.split(sep=" ")
+            words.append(embed_list[0])
+            ids.append(i)
+        pd.DataFrame(data={"words": words, "id": ids}). \
+            to_csv(path_or_buf="./data/dataset/words_ids.csv", index=False, encoding="utf_8")
+    else:
+        print("there is no embedings files")
 
 
 #转换原始corpus为韵律词(PW)格式标记
@@ -170,7 +231,7 @@ def file2corpus(filename):
     return corpus              #[人/b  们/e  常/s  说/s  生/b  活/e  是/s  一/s  部/s  教/b  科/m  书/e ,xxx,....]
 
 
-def make_component(corpus,name):
+def make_component(corpus):
     '''
     :param corpus: 传入原始语料句子corpus列表得到的字数据datas和对应的labels数据都放到dataframe里面存储,方便后面的处理
     :return: df_data
@@ -190,43 +251,25 @@ def make_component(corpus,name):
     df_data['sentence_len'] = df_data['sentences'].apply(lambda sentences: len(sentences))  # 每句话长度
     print("max sentence length:",df_data["sentence_len"].max())
 
-    # 得到所有的字,这里的all_words是一个列表,存放了这个语料中所有的词
-    all_words = list(chain(*df_data['sentences'].values))
-    sr_allwords = pd.Series(data=all_words)     # 2.列表做成pandas的Series
-    words = (sr_allwords.value_counts()).index  #字列表.统计每个字出现的频率,同时相当于去重复,得到字的集合(这里还是Serieas的index对象)
-    print("charactor number:",len(words))
-
-    words_id = range(1, len(words) + 1)         #字的id列表,从1开始，因为准备把0作为填充值
     tags = ['n', 'b']                           #tag列表
     tags_id = range(len(tags))                  #tag的id列表
 
-    #保存基本组件,在./dataset/name/下面会有words_ids.csv,tags_ids.csv,df_data.csv三个文件
-    if not os.path.exists("./data/dataset/"):
-        os.mkdir("./data/dataset/")
-    if not os.path.exists("./data/dataset/"+name):
-        os.mkdir("./data/dataset/"+name)
-
-    # words以及对应的id组件
-    pd.DataFrame(data={"words":words,"id":words_id}).\
-        to_csv(path_or_buf="./data/dataset/"+name+"/words_ids.csv",index=False,encoding="utf_8")
     # tags以及对应的id组件
     pd.DataFrame(data={"tags":tags,"id":tags_id}).\
-        to_csv(path_or_buf="./data/dataset/"+name+"/tags_ids.csv",index=False,encoding="utf_8")
+        to_csv(path_or_buf="./data/dataset/tags_ids.csv",index=False,encoding="utf_8")
     #存储df_data
-    df_data.to_csv(path_or_buf="./data/dataset/"+name+"/df_data.csv",index=False,encoding="utf-8")
+    df_data.to_csv(path_or_buf="./data/dataset/df_data.csv",index=False,encoding="utf-8")
     return df_data      #暂时不保存,返回
 
-def read_component(name):
-    '''
-    从文件里面读取基本的component
-    :param name:
-    :return: words2id, id2words, tags2id, id2tags
-    '''
+
+#read basic component from .csv files
+def read_component():
     #读取words和ids的dataframe
-    df_words_ids=pd.read_csv(filepath_or_buffer="./data/dataset/"+name+"/words_ids.csv",encoding="utf-8")
+    df_words_ids=pd.read_csv(filepath_or_buffer="./data/dataset/words_ids.csv",encoding="utf-8")
     #读取tags和ids的dataframe
-    df_tags_ids=pd.read_csv(filepath_or_buffer="./data/dataset/"+name+"/tags_ids.csv",encoding="utf-8")
-    #装换为words2id, id2words, tags2id, id2tags
+    df_tags_ids=pd.read_csv(filepath_or_buffer="./data/dataset/tags_ids.csv",encoding="utf-8")
+
+    #转换为words2id, id2words, tags2id, id2tags
     #df_data=pd.DataFrame(data={})
     words2id=pd.Series(data=df_words_ids["id"].values,index=df_words_ids["words"].values)
     id2words=pd.Series(data=df_words_ids["words"].values,index=df_words_ids["id"].values)
@@ -234,16 +277,16 @@ def read_component(name):
     id2tags = pd.Series(data=df_tags_ids["tags"].values, index=df_tags_ids["id"].values)
     return words2id, id2words, tags2id, id2tags
 
-#转换为最后模型适合的数据集,name表示转换后的数据集存储在哪个文件下面./data/dataset/name
-def make_dataset(inFile,project_name,outFile):
+#转换为最后模型适合的数据集,name表示转换后的数据集存储在哪个文件下面./data/dataset/
+def make_dataset(inFile,outFile):
     corpus = file2corpus(inFile)
     #print("----corpus contains ", len(corpus), " sentences.")
     #保存基本组件,并且返回df_data
-    print("----saving component <tags_ids.csv> and <words_ids.csv>")
-    df_data=make_component(corpus,project_name)
+    print("----saving component <tags_ids.csv> ")
+    df_data=make_component(corpus)
 
     #读取组件,并且装换为合适的格式
-    words2id, id2words, tags2id, id2tags =read_component(project_name)
+    words2id, id2words, tags2id, id2tags =read_component()
     #print("words2id.shape:",words2id.shape)
     print("----dataset contains ",df_data.shape[0]," sentences.")
 
@@ -277,23 +320,23 @@ def make_dataset(inFile,project_name,outFile):
     #df_data_train,df_data_test=train_test_split(df_data,test_size=0.2)              #训练集和测试集
     #df_data_train,df_data_validation=train_test_split(df_data_train,test_size=0.1)  #训练集和验证集
 
-    df_data.to_csv(path_or_buf="./data/dataset/" + project_name + "/"+outFile+"_df_data_final.csv", index=False, encoding="utf-8")
+    df_data.to_csv(path_or_buf="./data/dataset/"+outFile+"_df_data_final.csv", index=False, encoding="utf-8")
     #保存最终数据到pkl文件
     print("----saving final dataset <"+outFile+"_summary_train.pkl>")
-    df_data_train.to_pickle(path="./data/dataset/"+project_name+"/"+outFile+"_summary_train.pkl")
+    df_data_train.to_pickle(path="./data/dataset/"+"/"+outFile+"_summary_train.pkl")
 
     print("----saving final dataset <"+outFile+"_summary_validation.pkl>")
-    df_data_validation.to_pickle(path="./data/dataset/"+project_name+"/"+outFile+"_summary_validation.pkl")
+    df_data_validation.to_pickle(path="./data/dataset/"+outFile+"_summary_validation.pkl")
 
 
 #summary_train.pkl
 if __name__=="__main__":
     start_time = time.time()
-    print("[1]-->trans corpus to char corpus and train char embeddings...")
+    print("[1]-->trans corpus to char corpus and char embeddings...")
     toCharCorpus(inFile="./data/corpus/prosody.txt",outFile="./data/corpus/prosody_char.txt")
     toCharEmbeddings(inFile="./data/corpus/prosody_char.txt")
 
-    print("[2]-->trans corpus to word corpus and train word embeddings...")
+    print("[2]-->trans corpus to word corpus and word embeddings...")
     toWordCorpus(inFile="./data/corpus/prosody.txt", outFile="./data/corpus/prosody_word.txt")
     toWordEmbeddings(inFile="./data/corpus/prosody_word.txt")
 
@@ -307,12 +350,12 @@ if __name__=="__main__":
     #toIPH("./data/corpus/prosody.txt")
 
     print("[6]-->trans corpus_pw to dataset......")
-    make_dataset(inFile="./data/corpus/prosody_pw.txt",project_name="temptest",outFile="pw")
+    make_dataset(inFile="./data/corpus/prosody_pw.txt",outFile="pw")
 
     print("[7]-->trans corpus_pph to dataset......")
-    make_dataset(inFile="./data/corpus/prosody_pph.txt", project_name="temptest", outFile="pph")
+    make_dataset(inFile="./data/corpus/prosody_pph.txt", outFile="pph")
 
     #print("[8]-->trans corpus_iph to dataset......")
-    #make_dataset(in_filename="./data/corpus/prosody_iph.txt", project_name="temptest", out_filename="iph")
+    #make_dataset(in_filename="./data/corpus/prosody_iph.txt", out_filename="iph")
     duration = time.time() - start_time;
     print("END! this operation spends ", round(duration / 60, 2), " mins")
