@@ -43,6 +43,7 @@ class Alignment_Seq2Seq():
 
         self.input_keep_prob=parameter.INPUT_KEEP_PROB
         self.output_keep_prob=parameter.OUTPUT_KEEP_PROB
+        self.decay_rate=parameter.DECAY
 
 
     # encoder,传入是前向和后向的cell,还有inputs
@@ -506,12 +507,23 @@ class Alignment_Seq2Seq():
 
             # ---------------------------------------------------------------------------------------
             '''
+            # adjust learning rate
+            global_step = tf.Variable(initial_value=1, trainable=False)
+            start_learning_rate = self.learning_rate
+            learning_rate = tf.train.exponential_decay(
+                learning_rate=start_learning_rate,
+                global_step=global_step,
+                decay_steps=(X_train.shape[0]//self.batch_size)+1,
+                decay_rate=self.decay_rate,
+                staircase=True,
+                name="decay_learning_rate"
+            )
 
             # loss
             self.loss = self.loss_pw + self.loss_pph
 
             # optimizer
-            self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
+            self.optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(self.loss,global_step=global_step)
             self.init_op = tf.global_variables_initializer()
             self.init_local_op = tf.local_variables_initializer()
 
@@ -546,10 +558,10 @@ class Alignment_Seq2Seq():
                 for i in range(0, (train_Size // self.batch_size)):
                     #注意:这里获取的都是mask之后的值
                     _, train_loss, y_train_pw_masked,y_train_pph_masked,\
-                    train_pred_pw, train_pred_pph = sess.run(
+                    train_pred_pw, train_pred_pph ,lr= sess.run(
                         fetches=[self.optimizer, self.loss,
                                  y_p_pw_masked,y_p_pph_masked,
-                                 pred_pw_masked, pred_pph_masked],
+                                 pred_pw_masked, pred_pph_masked,learning_rate],
                         feed_dict={
                             self.X_p: X_train[i * self.batch_size:(i + 1) * self.batch_size],
                             self.y_p_pw: y_train_pw[i * self.batch_size:(i + 1) * self.batch_size],
@@ -562,7 +574,7 @@ class Alignment_Seq2Seq():
                             self.output_keep_prob_p:self.output_keep_prob
                         }
                     )
-
+                    print("lr:",lr)
                     # loss
                     self.train_losses.append(train_loss)
                     # metrics

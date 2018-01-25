@@ -41,8 +41,8 @@ def getTag2(preds_pw,preds_pph):
 def recover2(X,preds_pw,preds_pph,filename):
     arg=getTag2(preds_pw,preds_pph)
     arg=np.reshape(arg,newshape=(-1,parameter.MAX_SENTENCE_SIZE))   #[test_size,max_sentence_size]
-    print("arg.shape",arg.shape)
-    print("arg:\n", arg)
+    #print("arg.shape",arg.shape)
+    #print("arg:\n", arg)
     #get id2words
     df_words_ids = pd.read_csv(filepath_or_buffer="../data/dataset/temptest/words_ids.csv", encoding="utf-8")
     #print(df_words_ids.head(5))
