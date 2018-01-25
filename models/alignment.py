@@ -190,7 +190,7 @@ class Alignment_Seq2Seq():
 
             #word embeddings
             self.word_embeddings=tf.Variable(
-                initial_value=tf.zeros(shape=(self.word_vocab_size,self.word_embedding_size),dtype=tf.float32),
+                initial_value=util.readEmbeddings(file="../data/embeddings/word_vec.txt"),
                 name="word_embeddings"
             )
 
@@ -757,11 +757,11 @@ if __name__ == "__main__":
     # 读数据
     print("Loading Data...")
     # pw
-    df_train_pw = pd.read_pickle(path="../data/dataset/temptest/pw_summary_train.pkl")
-    df_validation_pw = pd.read_pickle(path="../data/dataset/temptest/pw_summary_validation.pkl")
+    df_train_pw = pd.read_pickle(path="../data/dataset/pw_summary_train.pkl")
+    df_validation_pw = pd.read_pickle(path="../data/dataset/pw_summary_validation.pkl")
     # pph
-    df_train_pph = pd.read_pickle(path="../data/dataset/temptest/pph_summary_train.pkl")
-    df_validation_pph = pd.read_pickle(path="../data/dataset/temptest/pph_summary_validation.pkl")
+    df_train_pph = pd.read_pickle(path="../data/dataset/pph_summary_train.pkl")
+    df_validation_pph = pd.read_pickle(path="../data/dataset/pph_summary_validation.pkl")
 
     # iph
     #df_train_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_train.pkl")
