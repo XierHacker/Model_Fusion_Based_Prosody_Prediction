@@ -65,7 +65,6 @@ def recover2(X,preds_pw,preds_pph,filename):
     f.close()
 
 #read extra info form file,like pos info of word,or position info etc...
-#trans to one-hot format
 def readExtraInfo(file):
     f = open(file=file, encoding="utf-8")
     lines = f.readlines()
@@ -82,21 +81,38 @@ def readExtraInfo(file):
             X[i, j] = id
             j += 1
         i += 1
-    #print(X)
-    #print("word_id_train.shape", X.shape)
     return X
 
-    #one-hot encoder
+#read embeddings file and return a ndarray
+def readEmbeddings(file):
+    f=open(file=file,encoding="utf-8")
+    lines=f.readlines()
+    #first row is info
+    info=lines[0].strip()
+    info_list=info.split(sep=" ")
+    vocab_size=int(info_list[0])
+    embedding_dims=int(info_list[1])
+    embeddings=np.zeros(shape=(vocab_size+1,embedding_dims),dtype=np.float32)
+    for i in range(1,vocab_size+1):
+        embed=lines[i].strip()
+        embed_list=embed.split(sep=" ")
+        for j in range(1,embedding_dims+1):
+            embeddings[i][j-1]=embed_list[j]
+    print(embeddings.shape)
+    return embeddings
+
+
 
 
 if __name__ =="__main__":
-    print("read extra info test:")
+    #print("read extra info test:")
     #readExtraInfo(file="./data/dataset/pos_train_tag.txt")
     #readExtraInfo(file="./data/dataset/pos_test_tag.txt")
 
     #readExtraInfo(file="./data/dataset/length_train_tag.txt")
     #readExtraInfo(file="./data/dataset/length_test_tag.txt")
-
+    readEmbeddings(file="./data/embeddings/word_vec.txt")
+    readEmbeddings(file="./data/embeddings/char_vec.txt")
 
 
 '''
