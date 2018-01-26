@@ -193,6 +193,7 @@ class Alignment_Seq2Seq():
                 initial_value=util.readEmbeddings(file="../data/embeddings/word_vec.txt"),
                 name="word_embeddings"
             )
+            print("wordembedding.shape",self.word_embeddings.shape)
 
             #pos one-hot
             self.pos_one_hot=tf.one_hot(

@@ -10,7 +10,7 @@ HIDDEN_UNITS_NUM2=256                   #隐藏层2结点数量
 BATCH_SIZE=50                          #batch大小
 
 #learning rate
-LEARNING_RATE=0.0015                      #学习率
+LEARNING_RATE=0.002                      #学习率
 DECAY=0.05                                #衰减系数
 
 #Weaken Overfitting

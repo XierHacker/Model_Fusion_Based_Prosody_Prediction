@@ -98,7 +98,7 @@ def readEmbeddings(file):
         embed_list=embed.split(sep=" ")
         for j in range(1,embedding_dims+1):
             embeddings[i][j-1]=embed_list[j]
-    print(embeddings.shape)
+    #print(embeddings.shape)
     return embeddings
 
 
