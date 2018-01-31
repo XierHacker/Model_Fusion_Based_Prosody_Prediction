@@ -101,6 +101,34 @@ def readEmbeddings(file):
     #print(embeddings.shape)
     return embeddings
 
+#
+def getCWE(word_embed_file,char_embed_file):
+    word_embeddings=readEmbeddings(file=word_embed_file)
+    print("shape of word_embeddings:",word_embeddings.shape)
+    char_embeddings=readEmbeddings(file=char_embed_file)
+    print("shape of char_embeddings:",char_embeddings.shape)
+
+    #load id-word df
+    df_words_ids = pd.read_csv(filepath_or_buffer="../data/dataset/words_ids.csv", encoding="utf-8")
+    id2words = pd.Series(data=df_words_ids["words"].values, index=df_words_ids["id"].values)
+
+    #load id-char df
+    df_chars_ids = pd.read_csv(filepath_or_buffer="../data/dataset/chars_ids.csv", encoding="utf-8")
+    chars2id = pd.Series(data=df_chars_ids["id"].values, index=df_chars_ids["chars"].values)
+
+    for i in range(1,word_embeddings.shape[0]):
+        #print(id2words[i])
+        word=id2words[i]
+        sum_char_embeddings=np.zeros(shape=(128,),dtype=np.float32)
+        for char in word:
+            char_id=chars2id[char]
+            sum_char_embeddings+=char_embeddings[char_id]
+        sum_char_embeddings/=len(word)
+        word_embeddings[i]+=sum_char_embeddings
+    cwe=word_embeddings/2
+    return cwe
+
+
 
 
 
@@ -111,8 +139,9 @@ if __name__ =="__main__":
 
     #readExtraInfo(file="./data/dataset/length_train_tag.txt")
     #readExtraInfo(file="./data/dataset/length_test_tag.txt")
-    readEmbeddings(file="./data/embeddings/word_vec.txt")
-    readEmbeddings(file="./data/embeddings/char_vec.txt")
+    #readEmbeddings(file="./data/embeddings/word_vec.txt")
+    #readEmbeddings(file="./data/embeddings/char_vec.txt")
+    getCWE(word_embed_file="./data/embeddings/word_vec.txt",char_embed_file="./data/embeddings/char_vec.txt")
 
 
 '''
