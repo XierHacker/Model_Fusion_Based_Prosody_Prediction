@@ -344,6 +344,8 @@ if __name__ =="__main__":
         os.mkdir("./data/corpus/")
     if not os.path.exists("./data/dataset"):
             os.mkdir("./data/dataset/")
+    if not os.path.exists("./result"):
+        os.mkdir("./result")
 
     print("[1]-> Conver raw .utf-8 files to prosody tagged files")
     toProsody(inFile="./data/raw/prosody_test_tag.utf8",outFile="./data/corpus/prosody_test.txt")

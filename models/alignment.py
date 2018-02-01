@@ -668,7 +668,7 @@ class Alignment():
                     X=X_validation,
                     preds_pw=test_pred_pw,
                     preds_pph=test_pred_pph,
-                    filename="recover_epoch_" + str(epoch) + ".txt"
+                    filename="../result/alignment/recover_epoch_" + str(epoch) + ".txt"
                 )
 
                 # when we get a new best validation accuracy,we store the model

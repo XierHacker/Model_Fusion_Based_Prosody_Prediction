@@ -635,7 +635,7 @@ class BiLSTM_CWE():
                     X=X_validation,
                     preds_pw=test_pred_pw,
                     preds_pph=test_pred_pph,
-                    filename="recover_epoch_" + str(epoch) + ".txt"
+                    filename="../result/bilstm_cwe/recover_epoch_" + str(epoch) + ".txt"
                 )
 
     # 返回预测的结果或者准确率,y not None的时候返回准确率,y ==None的时候返回预测值

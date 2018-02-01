@@ -16,6 +16,9 @@ def eval(y_true,y_pred):
     f_1=f1_score(y_true=y_true,y_pred=y_pred,average=None)
     return accuracy,f_1
 
+def getProb(prob_pw,prob_pph):
+    pass
+
 def getTag2(preds_pw,preds_pph):
     # get complex "#" index
     length = preds_pw.shape[0]
@@ -35,6 +38,7 @@ def getTag2(preds_pw,preds_pph):
                 arg[i] = 0
     arg = (arg / 2).astype(dtype=np.int32)
     return arg
+
 
 
 #recover to .txt format
@@ -64,7 +68,7 @@ def recover2(X,preds_pw,preds_pph,filename):
     f.write(doc)
     f.close()
 
-#read extra info form file,like pos info of word,or position info etc...
+#read extra information from file,like pos info of word,or position info etc...
 def readExtraInfo(file):
     f = open(file=file, encoding="utf-8")
     lines = f.readlines()
@@ -83,7 +87,8 @@ def readExtraInfo(file):
         i += 1
     return X
 
-#read embeddings file and return a ndarray
+
+#读取预训练的embeddings
 def readEmbeddings(file):
     f=open(file=file,encoding="utf-8")
     lines=f.readlines()
@@ -101,7 +106,7 @@ def readEmbeddings(file):
     #print(embeddings.shape)
     return embeddings
 
-#
+#返回字增强之后的word-embeddings
 def getCWE(word_embed_file,char_embed_file):
     word_embeddings=readEmbeddings(file=word_embed_file)
     print("shape of word_embeddings:",word_embeddings.shape)
@@ -129,7 +134,9 @@ def getCWE(word_embed_file,char_embed_file):
     return cwe
 
 
-
+#从结果文件中抽取概率
+def extractProb(file):
+    f=open(file)
 
 
 if __name__ =="__main__":
