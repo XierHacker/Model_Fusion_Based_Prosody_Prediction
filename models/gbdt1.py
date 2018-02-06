@@ -12,7 +12,6 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import f1_score
 
 
-
 class GBDT1():
     def __init__(self):
         self.n_estimators=30
@@ -27,13 +26,12 @@ class GBDT1():
             subsample=self.sub_sample
         )
 
-
-    def fit(self,X_train,y_train,X_valid,y_valid):
+    def fit(self,X_train,y_train,X_test,y_test):
         self.gbdt.fit(X=X_train,y=y_train)
-        pred=self.gbdt.predict(X=X_valid)
+        pred=self.gbdt.predict(X=X_test)
         print(pred.shape)
-        print("accracy:",accuracy_score(y_true=y_valid,y_pred=pred))
-        print("f1-score:",f1_score(y_true=y_valid,y_pred=pred,average=None))
+        print("accracy:",accuracy_score(y_true=y_test,y_pred=pred))
+        print("f1-score:",f1_score(y_true=y_test,y_pred=pred,average=None))
 
 
     def pred(self,X):
@@ -42,23 +40,18 @@ class GBDT1():
 
 if __name__=="__main__":
     print("loading data....")
-    X_crf,labels=util.extractProb(file="../result/crf/crf_prob_train.txt")
-    X_alignment=util.extractProb2(file="../result/alignment/alignment_prob_train.txt")
-    #print(X_crf.shape)
-    #print(labels.shape)
-    #print("labels",labels)
-    #print(X_alignment.shape)
-    X=np.concatenate((X_crf,X_alignment),axis=1)
-    #print(X.shape)
-    X_train=X[:700000]
-    X_valid=X[700000:]
-    #print(X_train.shape)
-    #print(X_valid.shape)
-    labels_train=labels[:700000]
-    labels_valid=labels[700000:]
+    #training data
+    X_train_crf,labels_train,preds_train_crf=util.extractProb(file="../result/crf/crf_prob_train.txt")
+    X_train_alignment=util.extractProb2(file="../result/alignment/alignment_prob_train.txt")
+    X_train=np.concatenate((X_train_crf,X_train_alignment),axis=1)
+
+    # test data
+    X_test_crf, labels_test, preds_test_crf = util.extractProb(file="../result/crf/crf_prob_test.txt")
+    X_test_alignment = util.extractProb2(file="../result/alignment/alignment_prob_test.txt")
+    X_test = np.concatenate((X_test_crf, X_test_alignment), axis=1)
 
     print("run model....")
     model=GBDT1()
-    model.fit(X_train=X_train,y_train=labels_train,X_valid=X_valid,y_valid=labels_valid)
+    model.fit(X_train=X_train,y_train=labels_train,X_test=X_test,y_test=labels_test)
 
 

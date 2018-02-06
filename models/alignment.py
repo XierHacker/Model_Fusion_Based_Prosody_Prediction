@@ -88,17 +88,22 @@ class Alignment():
 
     # forward process and training process
     def fit(self, X_train, y_train, len_train, pos_train,length_train,position_train,
-            X_validation, y_validation, len_validation, pos_validaton,length_validation,position_validation,
-            name, print_log=True):
-        # ---------------------------------------forward computation--------------------------------------------#
+            X_valid, y_valid, len_valid, pos_valid,length_valid,position_valid,
+            X_test, y_test, len_test, pos_test, length_test, position_test,name, print_log=True):
+        #handle data
         y_train_pw = y_train[0]
         y_train_pph = y_train[1]
-        #y_train_iph = y_train[2]
+        # y_train_iph = y_train[2]
 
-        y_validation_pw = y_validation[0]
-        y_validation_pph = y_validation[1]
-        #y_validation_iph = y_validation[2]
-        # ---------------------------------------define graph---------------------------------------------#
+        y_valid_pw = y_valid[0]
+        y_valid_pph = y_valid[1]
+        # y_valid_iph = y_valid[2]
+
+        y_test_pw = y_test[0]
+        y_test_pph = y_test[1]
+        # y_valid_iph = y_valid[2]
+
+        # ------------------------------------------define graph---------------------------------------------#
         with self.graph.as_default():
             # data place holder
             self.X_p = tf.placeholder(
@@ -554,7 +559,9 @@ class Alignment():
             sess.run(self.init_local_op)
 
             train_Size = X_train.shape[0];
-            validation_Size = X_validation.shape[0]
+            validation_Size = X_valid.shape[0]
+            test_Size = X_test.shape[0]
+
             self.best_validation_loss = 1000            # best validation accuracy in training process
 
             #store result
@@ -618,7 +625,6 @@ class Alignment():
                     self.train_losses.append(train_loss)
                     s_loss += (str(train_loss) + "\n")
                     # metrics
-
                     accuracy_pw, f1_pw = util.eval(y_true=y_train_pw_masked,y_pred=train_pred_pw)               # pw
                     accuracy_pph, f1_pph = util.eval(y_true=y_train_pph_masked,y_pred=train_pred_pph)           # pph
                     #accuracy_iph, f1_1_iph, f1_2_iph = util.eval(y_true=y_train_iph_masked,y_pred=train_pred_iph)   # iph
@@ -636,8 +642,8 @@ class Alignment():
                     #self.c2_f_iph.append(f1_2_iph)
 
 
-                # validation in every epoch
-                self.validation_loss, y_valid_pw_masked, y_valid_pph_masked, \
+                #----------------------------------validation in every epoch----------------------------------
+                self.valid_loss, y_valid_pw_masked, y_valid_pph_masked, \
                 valid_pred_pw_masked, valid_pred_pph_masked, valid_pred_pw, valid_pred_pph, \
                 valid_prob_pw_masked, valid_prob_pph_masked= sess.run(
                     fetches=[self.loss, y_p_pw_masked, y_p_pph_masked,
@@ -645,13 +651,13 @@ class Alignment():
                              prob_pw_masked, prob_pph_masked
                         ],
                     feed_dict={
-                        self.X_p: X_validation,
-                        self.y_p_pw: y_validation_pw,
-                        self.y_p_pph: y_validation_pph,
-                        self.seq_len_p: len_validation,
-                        self.pos_p: pos_validation,
-                        self.length_p: length_validation,
-                        self.position_p: position_validation,
+                        self.X_p: X_valid,
+                        self.y_p_pw: y_valid_pw,
+                        self.y_p_pph: y_valid_pph,
+                        self.seq_len_p: len_valid,
+                        self.pos_p: pos_valid,
+                        self.length_p: length_valid,
+                        self.position_p: position_valid,
                         self.keep_prob_p: 1.0,
                         self.input_keep_prob_p: 1.0,
                         self.output_keep_prob_p: 1.0
@@ -673,6 +679,62 @@ class Alignment():
                     y_true=y_valid_pph_masked,
                     y_pred=valid_pred_pph_masked
                 )
+                # recover to original corpus txt
+                # shape of valid_pred_pw,valid_pred_pw,valid_pred_pw:[corpus_size*time_stpes]
+                util.recover2(
+                    X=X_valid,
+                    preds_pw=valid_pred_pw,
+                    preds_pph=valid_pred_pph,
+                    filename="../result/alignment/valid_recover_epoch_" + str(epoch) + ".txt"
+                )
+                #----------------------------------------------------------------------------------------
+
+                # ----------------------------------test in every epoch----------------------------------
+                self.test_loss, y_test_pw_masked, y_test_pph_masked, \
+                test_pred_pw_masked, test_pred_pph_masked, test_pred_pw, test_pred_pph, \
+                test_prob_pw_masked, test_prob_pph_masked = sess.run(
+                    fetches=[self.loss, y_p_pw_masked, y_p_pph_masked,
+                             pred_pw_masked, pred_pph_masked, pred_pw, pred_pph,
+                             prob_pw_masked, prob_pph_masked
+                             ],
+                    feed_dict={
+                        self.X_p: X_test,
+                        self.y_p_pw: y_test_pw,
+                        self.y_p_pph: y_test_pph,
+                        self.seq_len_p: len_test,
+                        self.pos_p: pos_test,
+                        self.length_p: length_test,
+                        self.position_p: position_test,
+                        self.keep_prob_p: 1.0,
+                        self.input_keep_prob_p: 1.0,
+                        self.output_keep_prob_p: 1.0
+                    }
+                )
+                # write the prob to files
+                util.writeProb(
+                    prob_pw=test_prob_pw_masked,
+                    prob_pph=test_prob_pph_masked,
+                    outFile="../result/alignment/alignment_prob_test_epoch" + str(epoch) + ".txt"
+                )
+
+                # metrics
+                self.test_accuracy_pw, self.test_f1_pw = util.eval(
+                    y_true=y_test_pw_masked,
+                    y_pred=test_pred_pw_masked
+                )
+                self.test_accuracy_pph, self.test_f1_pph = util.eval(
+                    y_true=y_test_pph_masked,
+                    y_pred=test_pred_pph_masked
+                )
+                # recover to original corpus txt
+                # shape of test_pred_pw,test_pred_pw,test_pred_pw:[corpus_size*time_stpes]
+                util.recover2(
+                    X=X_test,
+                    preds_pw=test_pred_pw,
+                    preds_pph=test_pred_pph,
+                    filename="../result/alignment/test_recover_epoch_" + str(epoch) + ".txt"
+                )
+                # -----------------------------------------------------------------------------------
 
                 # self.valid_accuracy_iph, self.valid_f1_1_iph, self.valid_f1_2_iph = util.eval(y_true=y_valid_iph_masked,y_pred=valid_pred_iph)
 
@@ -681,6 +743,7 @@ class Alignment():
                 print("learning rate:", sum(lrs) / len(lrs))
                 self.showInfo(type="training")
                 self.showInfo(type="validation")
+                self.showInfo(type="test")
 
                 f=open(file="../result/alignment/train_accuracy_epoch"+str(epoch)+".txt",mode="w")
                 f.write(s_accus_pw)
@@ -689,14 +752,7 @@ class Alignment():
                 f.write(s_loss)
                 f.close()
 
-                # recover to original corpus txt
-                # shape of valid_pred_pw,valid_pred_pw,valid_pred_pw:[corpus_size*time_stpes]
-                util.recover2(
-                    X=X_validation,
-                    preds_pw=valid_pred_pw,
-                    preds_pph=valid_pred_pph,
-                    filename="../result/alignment/recover_epoch_" + str(epoch) + ".txt"
-                )
+
 
                 # when we get a new best validation accuracy,we store the model
                 if self.best_validation_loss < self.validation_loss:
@@ -773,9 +829,9 @@ class Alignment():
             #print("----avarage accuracy:", sum(self.train_accus_iph) / len(self.train_accus_iph))
             #print("----avarage f1-Score of N:", sum(self.c1_f_iph) / len(self.c1_f_iph))
             #print("----avarage f1-Score of B:", sum(self.c2_f_iph) / len(self.c2_f_iph))
-        else:
+        elif type=="validation":
             print("                             /**Validation info**/")
-            print("----avarage validation loss:", self.validation_loss)
+            print("----avarage validation loss:", self.valid_loss)
             print("PW:")
             print("----avarage accuracy:", self.valid_accuracy_pw)
             #print("----avarage f1-Score of N:", self.valid_f1_pw[0])
@@ -788,6 +844,22 @@ class Alignment():
             #print("----avarage accuracy:", self.valid_accuracy_iph)
             #print("----avarage f1-Score of N:", self.valid_f1_1_iph)
             #print("----avarage f1-Score of B:", self.valid_f1_2_iph)
+        else:
+            print("                             /**testation info**/")
+            print("----avarage test loss:", self.test_loss)
+            print("PW:")
+            print("----avarage accuracy:", self.test_accuracy_pw)
+            # print("----avarage f1-Score of N:", self.test_f1_pw[0])
+            print("----avarage f1-Score of B:", self.test_f1_pw[1])
+            print("PPH:")
+            print("----avarage accuracy :", self.test_accuracy_pph)
+            # print("----avarage f1-Score of N:", self.test_f1_pph[0])
+            print("----avarage f1-Score of B:", self.test_f1_pph[1])
+            # print("IPH:")
+            # print("----avarage accuracy:", self.test_accuracy_iph)
+            # print("----avarage f1-Score of N:", self.test_f1_1_iph)
+            # print("----avarage f1-Score of B:", self.test_f1_2_iph)
+
 
 
 # train && test
@@ -796,10 +868,13 @@ if __name__ == "__main__":
     print("Loading Data...")
     # pw
     df_train_pw = pd.read_pickle(path="../data/dataset/pw_summary_train.pkl")
-    df_validation_pw = pd.read_pickle(path="../data/dataset/pw_summary_validation.pkl")
+    df_valid_pw = pd.read_pickle(path="../data/dataset/pw_summary_valid.pkl")
+    df_test_pw = pd.read_pickle(path="../data/dataset/pw_summary_test.pkl")
+
     # pph
     df_train_pph = pd.read_pickle(path="../data/dataset/pph_summary_train.pkl")
-    df_validation_pph = pd.read_pickle(path="../data/dataset/pph_summary_validation.pkl")
+    df_valid_pph = pd.read_pickle(path="../data/dataset/pph_summary_valid.pkl")
+    df_test_pph = pd.read_pickle(path="../data/dataset/pph_summary_test.pkl")
 
     # iph
     #df_train_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_train.pkl")
@@ -808,69 +883,86 @@ if __name__ == "__main__":
     # 实际上,X里面的内容都是一样的,所以这里统一使用pw的X来作为所有的X
     # 但是标签是不一样的,所以需要每个都要具体定义
     X_train = np.asarray(list(df_train_pw['X'].values))
-    X_validation = np.asarray(list(df_validation_pw['X'].values))
-    #print("X_train:",X_train)
+    X_valid = np.asarray(list(df_valid_pw['X'].values))
+    X_test = np.asarray(list(df_test_pw['X'].values))
+
+    #print("X_train:\n",X_train)
     #print("X_train.shape",X_train.shape)
-    #print("X_validation:",X_validation)
-    #print("X_validation.shape:",X_validation.shape)
+    #print("X_valid:\n",X_valid)
+    #print("X_valid.shape:",X_valid.shape)
+    #print("X_test:\n", X_test)
+    #print("X_test.shape", X_test.shape)
+
     # tags
     y_train_pw = np.asarray(list(df_train_pw['y'].values))
-    y_validation_pw = np.asarray(list(df_validation_pw['y'].values))
+    y_valid_pw = np.asarray(list(df_valid_pw['y'].values))
+    y_test_pw = np.asarray(list(df_test_pw['y'].values))
 
     y_train_pph = np.asarray(list(df_train_pph['y'].values))
-    y_validation_pph = np.asarray(list(df_validation_pph['y'].values))
+    y_valid_pph = np.asarray(list(df_valid_pph['y'].values))
+    y_test_pph = np.asarray(list(df_test_pph['y'].values))
 
-    #y_train_iph = np.asarray(list(df_train_iph['y'].values))
-    #y_validation_iph = np.asarray(list(df_validation_iph['y'].values))
+    # y_train_iph = np.asarray(list(df_train_iph['y'].values))
+    # y_validation_iph = np.asarray(list(df_validation_iph['y'].values))
 
-    # length每一行序列的长度
-    # 因为都一样,所以统一使用pw的
+    # length每一行序列的长度,因为都一样,所以统一使用pw的
     len_train = np.asarray(list(df_train_pw['sentence_len'].values))
-    len_validation = np.asarray(list(df_validation_pw['sentence_len'].values))
+    len_valid = np.asarray(list(df_valid_pw['sentence_len'].values))
+    len_test = np.asarray(list(df_test_pw['sentence_len'].values))
     #print("len_train:", len_train.shape)
-    #print("len_validation:", len_validation.shape)
+    #print("len_valid:", len_valid.shape)
+    #print("len_test:", len_test.shape)
+
+    # ----------------------------------------Extra Info--------------------------------
+    # pos
+    pos_train = util.readExtraInfo(file="../data/dataset/pos_train_tag.txt")
+    pos_valid = util.readExtraInfo(file="../data/dataset/pos_valid_tag.txt")
+    pos_test = util.readExtraInfo(file="../data/dataset/pos_test_tag.txt")
+    #print("pos_train.shape",pos_train.shape)
+    #print("pos_valid.shape",pos_valid.shape)
+    #print("pos_test.shape", pos_test.shape)
+
+    # length
+    length_train = util.readExtraInfo(file="../data/dataset/length_train_tag.txt")
+    length_valid = util.readExtraInfo(file="../data/dataset/length_valid_tag.txt")
+    length_test = util.readExtraInfo(file="../data/dataset/length_test_tag.txt")
+    #print("shape of length_train:",length_train.shape)
+    #print("shape of length_valid:",length_valid.shape)
+    #print("shape of length_test:", length_test.shape)
+
+    # position
+    position_train = util.readExtraInfo(file="../data/dataset/position_train_tag.txt")
+    position_valid = util.readExtraInfo(file="../data/dataset/position_valid_tag.txt")
+    position_test = util.readExtraInfo(file="../data/dataset/position_test_tag.txt")
+    #print("shape of position_train:",position_train.shape)
+    #print("shape of positon_valid:",position_valid.shape)
+    #print("shape of positon_test:", position_test.shape)
+
+    # accum
+    accum_train = util.readExtraInfo(file="../data/dataset/accum_train_tag.txt")
+    accum_valid = util.readExtraInfo(file="../data/dataset/accum_valid_tag.txt")
+    accum_test = util.readExtraInfo(file="../data/dataset/accum_test_tag.txt")
+    #print("shape of accum_train:", accum_train.shape)
+    #print("shape of accum_valid:", accum_valid.shape)
+    #print("shape of accum_test:", accum_test.shape)
+
+    # accum reverse
+    accumR_train = util.readExtraInfo(file="../data/dataset/accum_reverse_train_tag.txt")
+    accumR_valid = util.readExtraInfo(file="../data/dataset/accum_reverse_valid_tag.txt")
+    accumR_test = util.readExtraInfo(file="../data/dataset/accum_reverse_test_tag.txt")
+    #print("shape of accumR_train:", accumR_train.shape)
+    #print("shape of accumR_valid:", accumR_valid.shape)
+    #print("shape of accumR_test:", accumR_test.shape)
+
 
     y_train = [y_train_pw, y_train_pph]
-    y_validation = [y_validation_pw, y_validation_pph]
-    # print("y_train_pw:\n", y_train_pw);
-    # print(y_train_pw.shape)
-    # print("y_train_pph:\n", y_train_pph);
-    # print(y_train_pph.shape)
-    # print("y_train_iph:\n", y_train_iph);
-    # print(y_train_iph.shape)
+    y_valid = [y_valid_pw, y_valid_pph]
+    y_test = [y_test_pw, y_test_pph]
 
-    #----------------------------------------Extra Info--------------------------------
-    #pos
-    pos_train=util.readExtraInfo(file="../data/dataset/pos_train_tag.txt")
-    pos_validation=util.readExtraInfo(file="../data/dataset/pos_test_tag.txt")
-    #print("pos_train.shape",pos_train.shape)
-    #print("pos_validation.shape",pos_validation.shape)
-
-    #length
-    length_train=util.readExtraInfo(file="../data/dataset/length_train_tag.txt")
-    length_validation = util.readExtraInfo(file="../data/dataset/length_test_tag.txt")
-    #print("shape of length_train:",length_train.shape)
-    #print("shape of length_test:",length_validation.shape)
-
-    #position
-    position_train = util.readExtraInfo(file="../data/dataset/position_train_tag.txt")
-    position_validation = util.readExtraInfo(file="../data/dataset/position_test_tag.txt")
-    #print("shape of position_train:",position_train.shape)
-    #print("shape of positon_test:",position_validation.shape)
-    #accum
-    accum_train = util.readExtraInfo(file="../data/dataset/accum_train_tag.txt")
-    accum_validation = util.readExtraInfo(file="../data/dataset/accum_test_tag.txt")
-    #print("shape of accum_train:", accum_train.shape)
-    #print("shape of accum_test:", accum_validation.shape)
-
-    #accum reverse
-    accumR_train = util.readExtraInfo(file="../data/dataset/accum_reverse_train_tag.txt")
-    accumR_validation = util.readExtraInfo(file="../data/dataset/accum_reverse_test_tag.txt")
-    #print("shape of accumR_train:", accumR_train.shape)
-    #print("shape of accumR_test:", accumR_validation.shape)
-
-    print("Run Model...\n\n\n")
+    #print("Run Model...\n\n\n")
     model = Alignment()
-    model.fit(X_train, y_train, len_train,pos_train,length_train,position_train,
-              X_validation, y_validation, len_validation, pos_validation,length_validation,position_validation,
-              "test", False)
+    model.fit(
+        X_train, y_train, len_train, pos_train, length_train, position_train,
+        X_valid, y_valid, len_valid, pos_valid, length_valid, position_valid,
+        X_test, y_test, len_test, pos_test, length_test, position_test,"test", False)
+

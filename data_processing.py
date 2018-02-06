@@ -314,19 +314,23 @@ def make_dataset(inFile,outFile):
     #print(df_data["X"].head(5))
     #print(df_data["y"].head(5))
 
-    #数据集切分0.2 比例
-    df_data_train=df_data[:66150]
-    df_data_validation=df_data[66150:]
-    #df_data_train,df_data_test=train_test_split(df_data,test_size=0.2)              #训练集和测试集
-    #df_data_train,df_data_validation=train_test_split(df_data_train,test_size=0.1)  #训练集和验证集
+    #数据集切分
+    df_data_train=df_data[:50000]
+    df_data_valid=df_data[50000:66150]
+    df_data_test = df_data[66150:]
 
-    df_data.to_csv(path_or_buf="./data/dataset/"+outFile+"_df_data_final.csv", index=False, encoding="utf-8")
+
     #保存最终数据到pkl文件
     print("----saving final dataset <"+outFile+"_summary_train.pkl>")
     df_data_train.to_pickle(path="./data/dataset/"+"/"+outFile+"_summary_train.pkl")
 
-    print("----saving final dataset <"+outFile+"_summary_validation.pkl>")
-    df_data_validation.to_pickle(path="./data/dataset/"+outFile+"_summary_validation.pkl")
+    print("----saving final dataset <"+outFile+"_summary_valida.pkl>")
+    df_data_valid.to_pickle(path="./data/dataset/"+outFile+"_summary_valid.pkl")
+
+    print("----saving final dataset <" + outFile + "_summary_test.pkl>")
+    df_data_test.to_pickle(path="./data/dataset/" + "/" + outFile + "_summary_test.pkl")
+
+    df_data.to_csv(path_or_buf="./data/dataset/" + outFile + "_df_data_final.csv", index=False, encoding="utf-8")
 
 
 #summary_train.pkl

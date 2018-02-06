@@ -3,7 +3,7 @@ CHAR_EMBEDDING_SIZE=128                 #字嵌入维度
 WORD_EMBEDDING_SIZE=128                 #词嵌入维度
 INPUT_SIZE=WORD_EMBEDDING_SIZE           #词嵌入维度
 
-MAX_EPOCH=3                            #最大迭代次数
+MAX_EPOCH=5                            #最大迭代次数
 LAYER_NUM=2                             #lstm层数2
 HIDDEN_UNITS_NUM=256                    #隐藏层结点数量
 HIDDEN_UNITS_NUM2=256                   #隐藏层2结点数量
@@ -11,7 +11,7 @@ BATCH_SIZE=20                           #batch大小
 
 #learning rate
 LEARNING_RATE=0.003                      #学习率
-DECAY=0.05                               #衰减系数
+DECAY=0.2                               #衰减系数
 
 #Weaken Overfitting
 KEEP_PROB=0.5                             #全连接 dropout 比率

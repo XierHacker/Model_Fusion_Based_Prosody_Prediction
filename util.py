@@ -200,9 +200,6 @@ def extractProb2(file):
     return probs_nd
 
 
-
-
-
 if __name__ =="__main__":
     #print("read extra info test:")
     #readExtraInfo(file="./data/dataset/pos_train_tag.txt")
@@ -212,18 +209,20 @@ if __name__ =="__main__":
     #readEmbeddings(file="./data/embeddings/word_vec.txt")
     #readEmbeddings(file="./data/embeddings/char_vec.txt")
     #getCWE(word_embed_file="./data/embeddings/word_vec.txt",char_embed_file="./data/embeddings/char_vec.txt")
-    prob,labels,preds=extractProb(file="./result/crf/crf_prob_train.txt")
-    print("preds",preds)
+    prob,labels,preds=extractProb(file="./result/crf/crf_prob_test.txt")
+    #print("preds.shape",preds.shape)
     #extractProb2(file="./result/alignment/alignment_prob_train.txt")
     #a = np.ones(shape=(10, 2), dtype=np.float32)
     #b = np.zeros(shape=(8, 2), dtype=np.float32)
-    #p1,f1=eval(y_true=labels,y_pred=preds)
-    #print("accuracy:",p1)
-    #print("f1-score:",f1)
-    prob_align=extractProb2(file="./result/alignment/alignment_prob_train.txt")
+    p1,f1=eval(y_true=labels,y_pred=preds)
+    print("accuracy:",p1)
+    print("f1-score:",f1)
+    prob_align=extractProb2(file="./result/alignment/alignment_prob_test.txt")
+    #print("prob_align.shape",prob_align.shape)
+    #print("prob_align:",prob_align)
     preds_align=np.argmax(prob_align,axis=-1,)
-    print(preds_align.shape)
-    print(preds_align)
+    #print(preds_align.shape)
+    #print(preds_align)
     p2, f2 = eval(y_true=labels, y_pred=preds_align)
     print("accuracy:",p2)
     print("f1-score:",f2)
