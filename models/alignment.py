@@ -289,17 +289,22 @@ class Alignment():
                 name="bias_pw"
             )
             #logits
-            logits_pw = tf.matmul(h_pw, w_pw) + b_pw        #logits_pw:[batch_size*max_time, 3]
-            logits_normal_pw=tf.reshape(                    #logits in an normal way:[batch_size,max_time_stpes,3]
+            logits_pw = tf.matmul(h_pw, w_pw) + b_pw        #logits_pw:[batch_size*max_time, 2]
+            logits_normal_pw=tf.reshape(                    #logits in an normal way:[batch_size,max_time_stpes,2]
                 tensor=logits_pw,
                 shape=(-1,self.max_sentence_size,self.class_num),
                 name="logits_normal_pw"
             )
-            logits_pw_masked = tf.boolean_mask(             # logits_pw_masked [seq_len1+seq_len2+....+,3]
+            logits_pw_masked = tf.boolean_mask(             # logits_pw_masked [seq_len1+seq_len2+..+seq_lenn, 2]
                 tensor=logits_normal_pw,
                 mask=self.mask,
                 name="logits_pw_masked"
             )
+            print("logits_pw_masked.shape",logits_pw_masked.shape)
+
+            #softmax
+            prob_pw_masked=tf.nn.softmax(logits=logits_pw_masked,dim=-1,name="prob_pw_masked")
+            print("prob_pw_masked.shape",prob_pw_masked.shape)
 
             # prediction
             pred_pw = tf.cast(tf.argmax(logits_pw, 1), tf.int32, name="pred_pw")   # pred_pw:[batch_size*max_time,]
@@ -408,6 +413,10 @@ class Alignment():
                 mask=self.mask,
                 name="logits_pph_masked"
             )
+
+            # softmax
+            prob_pph_masked = tf.nn.softmax(logits=logits_pph_masked, dim=-1, name="prob_pph_masked")
+            print("prob_pph_masked.shape", prob_pph_masked.shape)
 
             # prediction
             pred_pph = tf.cast(tf.argmax(logits_pph, 1), tf.int32, name="pred_pph")  # pred_pph:[batch_size*max_time,]
@@ -538,15 +547,19 @@ class Alignment():
             self.init_op = tf.global_variables_initializer()
             self.init_local_op = tf.local_variables_initializer()
 
-        # ------------------------------------Session-----------------------------------------
+        # --------------------------------------------Session-------------------------------------------------
         with self.session as sess:
             print("Training Start")
-            sess.run(self.init_op)                  # initialize all variables
+            sess.run(self.init_op)                      # initialize all variables
             sess.run(self.init_local_op)
 
             train_Size = X_train.shape[0];
             validation_Size = X_validation.shape[0]
-            self.best_validation_loss = 1000                # best validation accuracy in training process
+            self.best_validation_loss = 1000            # best validation accuracy in training process
+
+            #store result
+            if not os.path.exists("../result/alignment/"):
+                os.mkdir("../result/alignment/")
 
             # epoch
             for epoch in range(1, self.max_epoch + 1):
@@ -572,10 +585,13 @@ class Alignment():
                 for i in range(0, (train_Size // self.batch_size)):
                     #注意:这里获取的都是mask之后的值
                     _, train_loss, y_train_pw_masked,y_train_pph_masked,\
-                    train_pred_pw, train_pred_pph ,lr= sess.run(
+                    train_pred_pw, train_pred_pph ,lr,\
+                        train_prob_pw_masked,train_prob_pph_masked= sess.run(
                         fetches=[self.optimizer, self.loss,
                                  y_p_pw_masked,y_p_pph_masked,
-                                 pred_pw_masked, pred_pph_masked,learning_rate],
+                                 pred_pw_masked, pred_pph_masked,learning_rate,
+                                 prob_pw_masked, prob_pph_masked
+                                ],
                         feed_dict={
                             self.X_p: X_train[i * self.batch_size:(i + 1) * self.batch_size],
                             self.y_p_pw: y_train_pw[i * self.batch_size:(i + 1) * self.batch_size],
@@ -589,14 +605,22 @@ class Alignment():
                             self.output_keep_prob_p:self.output_keep_prob
                         }
                     )
+
+                    #write the prob to files
+                    util.writeProb(
+                        prob_pw=train_prob_pw_masked,
+                        prob_pph=train_prob_pph_masked,
+                        outFile="../result/alignment/alignment_prob_train_epoch"+str(epoch)+".txt"
+                    )
+
                     lrs.append(lr)
                     # loss
                     self.train_losses.append(train_loss)
                     s_loss += (str(train_loss) + "\n")
                     # metrics
 
-                    accuracy_pw, f1_pw = util.eval(y_true=y_train_pw_masked,y_pred=train_pred_pw)    # pw
-                    accuracy_pph, f1_pph = util.eval(y_true=y_train_pph_masked,y_pred=train_pred_pph)   # pph
+                    accuracy_pw, f1_pw = util.eval(y_true=y_train_pw_masked,y_pred=train_pred_pw)               # pw
+                    accuracy_pph, f1_pph = util.eval(y_true=y_train_pph_masked,y_pred=train_pred_pph)           # pph
                     #accuracy_iph, f1_1_iph, f1_2_iph = util.eval(y_true=y_train_iph_masked,y_pred=train_pred_iph)   # iph
 
                     self.train_accus_pw.append(accuracy_pw)
@@ -610,64 +634,67 @@ class Alignment():
                     self.c2_f_pph.append(f1_pph[1])
                     #self.c1_f_iph.append(f1_1_iph);
                     #self.c2_f_iph.append(f1_2_iph)
-                print("learning rate:",sum(lrs)/len(lrs))
-                f=open(file="train_accuracy_epoch"+str(epoch)+".txt",mode="w")
-                f.write(s_accus_pw)
-                f.close()
-                f = open(file="train_loss_epoch" + str(epoch) + ".txt", mode="w")
-                f.write(s_loss)
-                f.close()
+
 
                 # validation in every epoch
-                self.validation_loss, y_valid_pw_masked,y_valid_pph_masked,\
-                valid_pred_pw, valid_pred_pph = sess.run(
-                    fetches=[self.loss, y_p_pw_masked,y_p_pph_masked,
-                             pred_pw_masked, pred_pph_masked],
+                self.validation_loss, y_valid_pw_masked, y_valid_pph_masked, \
+                valid_pred_pw_masked, valid_pred_pph_masked, valid_pred_pw, valid_pred_pph, \
+                valid_prob_pw_masked, valid_prob_pph_masked= sess.run(
+                    fetches=[self.loss, y_p_pw_masked, y_p_pph_masked,
+                             pred_pw_masked, pred_pph_masked,pred_pw, pred_pph,
+                             prob_pw_masked, prob_pph_masked
+                        ],
                     feed_dict={
                         self.X_p: X_validation,
                         self.y_p_pw: y_validation_pw,
                         self.y_p_pph: y_validation_pph,
                         self.seq_len_p: len_validation,
-                        self.pos_p:pos_validation,
-                        self.length_p:length_validation,
-                        self.position_p:position_validation,
-                        self.keep_prob_p:1.0,
-                        self.input_keep_prob_p:1.0,
-                        self.output_keep_prob_p:1.0
-                    }
-                )
-
-                # metrics
-                self.valid_accuracy_pw, self.valid_f1_pw = util.eval(y_true=y_valid_pw_masked,y_pred=valid_pred_pw)
-                self.valid_accuracy_pph, self.valid_f1_pph = util.eval(y_true=y_valid_pph_masked,y_pred=valid_pred_pph)
-                #self.valid_accuracy_iph, self.valid_f1_1_iph, self.valid_f1_2_iph = util.eval(y_true=y_valid_iph_masked,y_pred=valid_pred_iph)
-
-                #show information
-                print("Epoch ", epoch, " finished.", "spend ", round((time.time() - start_time) / 60, 2), " mins")
-                self.showInfo(type="training")
-                self.showInfo(type="validation")
-
-                # test:using X_validation_pw
-                test_pred_pw, test_pred_pph = sess.run(
-                    fetches=[pred_pw, pred_pph],
-                    feed_dict={
-                        self.X_p: X_validation,
-                        self.seq_len_p: len_validation,
                         self.pos_p: pos_validation,
-                        self.length_p:length_validation,
-                        self.position_p:position_validation,
-                        self.keep_prob_p:1.0,
+                        self.length_p: length_validation,
+                        self.position_p: position_validation,
+                        self.keep_prob_p: 1.0,
                         self.input_keep_prob_p: 1.0,
                         self.output_keep_prob_p: 1.0
                     }
                 )
+                # write the prob to files
+                util.writeProb(
+                    prob_pw=valid_prob_pw_masked,
+                    prob_pph=valid_prob_pph_masked,
+                    outFile="../result/alignment/alignment_prob_valid_epoch" + str(epoch) + ".txt"
+                )
+
+                # metrics
+                self.valid_accuracy_pw, self.valid_f1_pw = util.eval(
+                    y_true=y_valid_pw_masked,
+                    y_pred=valid_pred_pw_masked
+                )
+                self.valid_accuracy_pph, self.valid_f1_pph = util.eval(
+                    y_true=y_valid_pph_masked,
+                    y_pred=valid_pred_pph_masked
+                )
+
+                # self.valid_accuracy_iph, self.valid_f1_1_iph, self.valid_f1_2_iph = util.eval(y_true=y_valid_iph_masked,y_pred=valid_pred_iph)
+
+                # show information
+                print("Epoch ", epoch, " finished.", "spend ", round((time.time() - start_time) / 60, 2), " mins")
+                print("learning rate:", sum(lrs) / len(lrs))
+                self.showInfo(type="training")
+                self.showInfo(type="validation")
+
+                f=open(file="../result/alignment/train_accuracy_epoch"+str(epoch)+".txt",mode="w")
+                f.write(s_accus_pw)
+                f.close()
+                f = open(file="../result/alignment/train_loss_epoch" + str(epoch) + ".txt", mode="w")
+                f.write(s_loss)
+                f.close()
 
                 # recover to original corpus txt
                 # shape of valid_pred_pw,valid_pred_pw,valid_pred_pw:[corpus_size*time_stpes]
                 util.recover2(
                     X=X_validation,
-                    preds_pw=test_pred_pw,
-                    preds_pph=test_pred_pph,
+                    preds_pw=valid_pred_pw,
+                    preds_pph=valid_pred_pph,
                     filename="../result/alignment/recover_epoch_" + str(epoch) + ".txt"
                 )
 
@@ -689,8 +716,7 @@ class Alignment():
                     # Generates MetaGraphDef.
                     saver.export_meta_graph("./models/" + name + "/bilstm/my-model-10000.meta")
                 print("\n\n")
-
-
+        
 
     # 返回预测的结果或者准确率,y not None的时候返回准确率,y ==None的时候返回预测值
     def pred(self, name, X, y=None, ):

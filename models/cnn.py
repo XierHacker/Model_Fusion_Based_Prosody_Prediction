@@ -13,7 +13,7 @@ import os
 import parameter
 import util
 
-class BiLSTM_CBOW():
+class CNN():
     def __init__(self):
         # basic environment
         self.graph = tf.Graph()
@@ -192,8 +192,36 @@ class BiLSTM_CBOW():
                 name="input_pw"
             )
             print("shape of cancated inputs_pw:", inputs_pw.shape)
+            inputs_pw_reshape=tf.expand_dims(
+                input=inputs_pw,
+                axis=-1,
+                name="inputs_pw_reshape"
+            )
+            print("shape of cancated inputs_pw_reshape:", inputs_pw_reshape.shape)
 
-            # forward part
+            #conv1
+            filter=tf.Variable(
+                initial_value=tf.random_normal(shape=(self.max_sentence_size,self.word_embedding_size,1,256)),
+                name="filter"
+            )
+            result_conv1=tf.nn.conv2d(
+                input=inputs_pw_reshape,
+                filter=filter,
+                strides=[1,1,1,1],
+                padding="SAME",
+                name="result_conv1"
+            )
+            print("result_conv1.shape",result_conv1.shape)
+            result2_conv1=tf.nn.relu(features=result_conv1)
+            result3_conv1=tf.reduce_max(
+                input_tensor=result2_conv1,
+                axis=2
+            )
+            print("result3_conv1.shape", result3_conv1.shape)
+            h_pw=tf.reshape(tensor=result3_conv1,shape=(-1,256))
+
+            '''
+              # forward part
             en_lstm_forward1_pw = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
             en_lstm_forward2_pw=rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
             en_lstm_forward_pw=rnn.MultiRNNCell(cells=[en_lstm_forward1_pw,en_lstm_forward2_pw])
@@ -230,13 +258,15 @@ class BiLSTM_CBOW():
             h_pw = tf.concat(values=[outputs_forward_pw, outputs_backward_pw], axis=2)
             h_pw=tf.reshape(tensor=h_pw,shape=(-1,self.hidden_units_num*2),name="h_pw")
             print("h_pw.shape",h_pw.shape)
+            '''
+
 
             # 全连接dropout
             h_pw = tf.nn.dropout(x=h_pw, keep_prob=self.keep_prob_p, name="dropout_h_pw")
 
             # fully connect layer(projection)
             w_pw = tf.Variable(
-                initial_value=tf.random_normal(shape=(self.hidden_units_num*2, self.class_num)),
+                initial_value=tf.random_normal(shape=(self.hidden_units_num, self.class_num)),
                 name="weights_pw"
             )
             b_pw = tf.Variable(
@@ -625,8 +655,7 @@ class BiLSTM_CBOW():
                         self.output_keep_prob_p:1.0
                     }
                 )
-                if not os.path.exists("../result/bilstm_cbow/"):
-                    os.mkdir("../result/bilstm_cbow/")
+
                 # recover to original corpus txt
                 # shape of valid_pred_pw,valid_pred_pw,valid_pred_pw:[corpus_size*time_stpes]
                 util.recover2(
@@ -798,7 +827,7 @@ if __name__ == "__main__":
     #print("shape of accumR_train:", accumR_train.shape)
     #print("shape of accumR_test:", accumR_validation.shape)
 
-    model = BiLSTM_CBOW()
+    model = CNN()
     model.fit(X_train, y_train, len_train,pos_train,length_train,position_train,
               X_validation, y_validation, len_validation, pos_validation,length_validation,position_validation,
               "test", False)

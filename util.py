@@ -16,8 +16,16 @@ def eval(y_true,y_pred):
     f_1=f1_score(y_true=y_true,y_pred=y_pred,average=None)
     return accuracy,f_1
 
-def getProb(prob_pw,prob_pph):
-    pass
+#从得到的prob_pw和prob_pph得到总的prob,并保存
+def writeProb(prob_pw,prob_pph,outFile):
+    f=open(file=outFile,mode="a+",encoding="utf-8")
+    for i in range(prob_pw.shape[0]):
+        prob_0=prob_pw[i,0]*prob_pph[i,0]
+        prob_1=prob_pw[i,1]*prob_pph[i,0]
+        prob_2=prob_pw[i,0]*prob_pph[i,1]+prob_pw[i,1]*prob_pph[i,1]
+        s=str(prob_0)+" "+str(prob_1)+" "+str(prob_2)+"\n"
+        f.write(s)
+    f.close()
 
 def getTag2(preds_pw,preds_pph):
     # get complex "#" index
@@ -38,7 +46,6 @@ def getTag2(preds_pw,preds_pph):
                 arg[i] = 0
     arg = (arg / 2).astype(dtype=np.int32)
     return arg
-
 
 
 #recover to .txt format
@@ -134,21 +141,95 @@ def getCWE(word_embed_file,char_embed_file):
     return cwe
 
 
-#从结果文件中抽取概率
+#从crf结果文件中抽取概率,并且返回ndarray类型
 def extractProb(file):
-    f=open(file)
+    probs=[]
+    labels=[]
+    preds=[]
+    f=open(file=file,encoding="utf-8")
+    lines=f.readlines()
+    for line in lines:
+        line=line.strip()
+        if line!="":
+            if line[0]!="#":
+                prob = []
+                #print(line)
+                #print(line[0])
+                line_list = line.split(sep="\t")
+                l_0 = line_list[9].split(sep="/")
+                prob.append(float(l_0[1]))
+                l_1 = line_list[10].split(sep="/")
+                prob.append(float(l_1[1]))
+                l_2 = line_list[11].split(sep="/")
+                prob.append(float(l_2[1]))
+                #print(prob)
+                probs.append(prob)
+                labels.append(float(line_list[7]))
+                preds.append(float(line_list[8].split(sep="/")[0]))
+    #print("len of probs:",probs[0])
+    probs_nd=np.array(probs,dtype=np.float32)
+    labels_nd=np.array(labels,dtype=np.int32)
+    preds_nd=np.array(preds,dtype=np.int32)
+    #print("shape of prob_nd",probs_nd.shape)
+    return probs_nd,labels_nd,preds_nd
+
+def extractProb2(file):
+    probs=[]
+    result=[]
+    f=open(file=file,encoding="utf-8")
+    lines=f.readlines()
+    for line in lines:
+        line=line.strip()
+        prob = []
+        #print(line)
+        #print(line[0])
+        line_list = line.split(sep=" ")
+        #print(line_list)
+        l_0 = line_list[0]
+        prob.append(float(l_0))
+        l_1 = line_list[1]
+        prob.append(float(l_1))
+        l_2 = line_list[2]
+        prob.append(float(l_2))
+        #print(prob)
+        probs.append(prob)
+    #print("len of probs:",probs[0])
+    probs_nd=np.array(probs,dtype=np.float32)
+    #print("shape of prob_nd",probs_nd.shape)
+    #print(probs_nd.dtype)
+    return probs_nd
+
+
+
 
 
 if __name__ =="__main__":
     #print("read extra info test:")
     #readExtraInfo(file="./data/dataset/pos_train_tag.txt")
     #readExtraInfo(file="./data/dataset/pos_test_tag.txt")
-
     #readExtraInfo(file="./data/dataset/length_train_tag.txt")
     #readExtraInfo(file="./data/dataset/length_test_tag.txt")
     #readEmbeddings(file="./data/embeddings/word_vec.txt")
     #readEmbeddings(file="./data/embeddings/char_vec.txt")
-    getCWE(word_embed_file="./data/embeddings/word_vec.txt",char_embed_file="./data/embeddings/char_vec.txt")
+    #getCWE(word_embed_file="./data/embeddings/word_vec.txt",char_embed_file="./data/embeddings/char_vec.txt")
+    prob,labels,preds=extractProb(file="./result/crf/crf_prob_train.txt")
+    print("preds",preds)
+    #extractProb2(file="./result/alignment/alignment_prob_train.txt")
+    #a = np.ones(shape=(10, 2), dtype=np.float32)
+    #b = np.zeros(shape=(8, 2), dtype=np.float32)
+    #p1,f1=eval(y_true=labels,y_pred=preds)
+    #print("accuracy:",p1)
+    #print("f1-score:",f1)
+    prob_align=extractProb2(file="./result/alignment/alignment_prob_train.txt")
+    preds_align=np.argmax(prob_align,axis=-1,)
+    print(preds_align.shape)
+    print(preds_align)
+    p2, f2 = eval(y_true=labels, y_pred=preds_align)
+    print("accuracy:",p2)
+    print("f1-score:",f2)
+
+
+
 
 
 '''
