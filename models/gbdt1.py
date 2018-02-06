@@ -45,13 +45,19 @@ if __name__=="__main__":
     X_train_alignment=util.extractProb2(file="../result/alignment/alignment_prob_train.txt")
     X_train=np.concatenate((X_train_crf,X_train_alignment),axis=1)
 
+    #valid data
+    X_valid_crf, labels_valid, preds_valid_crf = util.extractProb(file="../result/crf/crf_prob_valid.txt")
+    X_valid_alignment = util.extractProb2(file="../result/alignment/alignment_prob_valid.txt")
+    X_valid = np.concatenate((X_valid_crf, X_valid_alignment), axis=1)
+
     # test data
     X_test_crf, labels_test, preds_test_crf = util.extractProb(file="../result/crf/crf_prob_test.txt")
     X_test_alignment = util.extractProb2(file="../result/alignment/alignment_prob_test.txt")
     X_test = np.concatenate((X_test_crf, X_test_alignment), axis=1)
 
+
     print("run model....")
     model=GBDT1()
-    model.fit(X_train=X_train,y_train=labels_train,X_test=X_test,y_test=labels_test)
+    model.fit(X_train=X_valid,y_train=labels_valid,X_test=X_test,y_test=labels_test)
 
 

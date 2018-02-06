@@ -752,11 +752,9 @@ class Alignment():
                 f.write(s_loss)
                 f.close()
 
-
-
                 # when we get a new best validation accuracy,we store the model
-                if self.best_validation_loss < self.validation_loss:
-                    self.best_validation_loss = self.validation_loss
+                if self.best_validation_loss < self.valid_loss:
+                    self.best_validation_loss = self.valid_loss
                     print("New Best loss ", self.best_validation_loss, " On Validation set! ")
                     print("Saving Models......\n\n")
                     # exist ./models folder?
