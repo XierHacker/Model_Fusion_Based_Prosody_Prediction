@@ -14,9 +14,9 @@ from sklearn.metrics import f1_score
 
 class GBDT1():
     def __init__(self):
-        self.n_estimators=30
-        self.learning_rate=0.1
-        self.sub_sample=0.8
+        self.n_estimators=40
+        self.learning_rate=0.05
+        self.sub_sample=0.9
         self.loss_type="deviance"
 
         self.gbdt=GradientBoostingClassifier(
@@ -43,21 +43,24 @@ if __name__=="__main__":
     #training data
     X_train_crf,labels_train,preds_train_crf=util.extractProb(file="../result/crf/crf_prob_train.txt")
     X_train_alignment=util.extractProb2(file="../result/alignment/alignment_prob_train.txt")
-    X_train=np.concatenate((X_train_crf,X_train_alignment),axis=1)
+    X_train_cnn = util.extractProb2(file="../result/cnn/cnn_prob_train.txt")
+    X_train=np.concatenate((X_train_cnn,X_train_alignment),axis=1)
 
     #valid data
     X_valid_crf, labels_valid, preds_valid_crf = util.extractProb(file="../result/crf/crf_prob_valid.txt")
     X_valid_alignment = util.extractProb2(file="../result/alignment/alignment_prob_valid.txt")
-    X_valid = np.concatenate((X_valid_crf, X_valid_alignment), axis=1)
+    X_valid_cnn = util.extractProb2(file="../result/cnn/cnn_prob_valid.txt")
+    X_valid = np.concatenate((X_valid_cnn, X_valid_alignment), axis=1)
 
     # test data
     X_test_crf, labels_test, preds_test_crf = util.extractProb(file="../result/crf/crf_prob_test.txt")
     X_test_alignment = util.extractProb2(file="../result/alignment/alignment_prob_test.txt")
-    X_test = np.concatenate((X_test_crf, X_test_alignment), axis=1)
+    X_test_cnn = util.extractProb2(file="../result/cnn/cnn_prob_test.txt")
+    X_test = np.concatenate((X_test_cnn, X_test_alignment), axis=1)
 
 
     print("run model....")
     model=GBDT1()
-    model.fit(X_train=X_valid,y_train=labels_valid,X_test=X_test,y_test=labels_test)
+    model.fit(X_train=X_train,y_train=labels_train,X_test=X_test,y_test=labels_test)
 
 
