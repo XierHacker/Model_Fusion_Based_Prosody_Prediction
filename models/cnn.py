@@ -74,8 +74,8 @@ class CNN():
         #if self.dropout == 1.0:
         #    reuse = True
         with tf.variable_scope("idcnn" if not name else name):
-            shape = [1, 3, dim, 100]  # [1,3,120,100]
-            print("shape:",shape)
+            shape = [1, 3, dim, 100]  # [1,3,201,100]
+            #print("shape:",shape)
             filter_weights = tf.get_variable(
                 "idcnn_filter",
                 shape=[1,3,dim,100],
@@ -83,7 +83,7 @@ class CNN():
             )
 
             """
-            shape of input = [batch, in_height, in_width, in_channels]                  [?,1,28,201]
+            shape of input = [batch, in_height, in_width, in_channels]                  [20,1,28,201]
             shape of filter = [filter_height, filter_width, in_channels, out_channels]  [1,3,201,100]
             """
             layerInput = tf.nn.conv2d(
@@ -93,7 +93,7 @@ class CNN():
                 padding="SAME",
                 name="init_layer"
             )
-            print("layerInput.shape", layerInput.shape)
+            #print("layerInput.shape", layerInput.shape) #[batch_size,in_height,in_width,filter_num][20,1,28,100]
 
             finalOutFromLayers = []
             totalWidthForLastDim = 0
@@ -111,21 +111,21 @@ class CNN():
                         conv = tf.nn.atrous_conv2d(layerInput, w, rate=dilation, padding="SAME")
                         conv = tf.nn.bias_add(conv, b)
                         conv = tf.nn.relu(conv)
-                        print("conv.shape", conv.shape)
+                        #print("conv.shape", conv.shape)     #[batch_size,in_height,in_width,filter_num][20,1,28,100]
 
                         if isLast:
                             finalOutFromLayers.append(conv)
                             totalWidthForLastDim += 100
                         layerInput = conv
             finalOut = tf.concat(axis=3, values=finalOutFromLayers)
-            print("finalOut.shape", finalOut.shape)
+            #print("finalOut.shape", finalOut.shape) #[batch_size,in_height,in_width,filter_num*4][20,1,28,400]
             keepProb = 1.0 if reuse else 0.5
             finalOut = tf.nn.dropout(finalOut, keepProb)
 
             finalOut = tf.squeeze(finalOut, [1])
-            print("finalOut.shape", finalOut.shape)
+            #print("finalOut.shape", finalOut.shape) #[batch_size,in_width,filter_num*4][20,28,400]
             finalOut = tf.reshape(finalOut, [-1, totalWidthForLastDim])
-            print("finalOut.shape", finalOut.shape)
+            #print("finalOut.shape", finalOut.shape) #[batch_size*in_width,filter_num*4][20*28,400]
             #self.cnn_output_width = totalWidthForLastDim
             return finalOut
 
@@ -296,9 +296,9 @@ class CNN():
             print("shape of cancated inputs_pw:", inputs_pw.shape)
 
             cnn_out=self.IDCNN_layer(model_inputs=inputs_pw,dim=201,name="IDCNN_pw")
-            print("cnn_out.shape",cnn_out.shape)
+            #print("cnn_out.shape",cnn_out.shape)
             logits_pw=self.project_layer_idcnn(idcnn_outputs=cnn_out,name="cnn_project_pw")
-            print("shape of h_pw:",logits_pw.shape)
+            #print("shape of h_pw:",logits_pw.shape)
 
             logits_normal_pw=tf.reshape(                    #logits in an normal way:[batch_size,max_time_stpes,2]
                 tensor=logits_pw,
@@ -356,9 +356,9 @@ class CNN():
             print("shape of input_pph:", inputs_pph.shape)
 
             cnn_out_pph = self.IDCNN_layer(model_inputs=inputs_pph,dim=203, name="IDCNN_pph")
-            print("cnn_out.shape", cnn_out_pph.shape)
+            #print("cnn_out.shape", cnn_out_pph.shape)
             logits_pph = self.project_layer_idcnn(idcnn_outputs=cnn_out_pph, name="cnn_project_pph")
-            print("shape of h_pw:", logits_pph.shape)
+            #print("shape of h_pw:", logits_pph.shape)
 
             logits_normal_pph = tf.reshape(                 # logits in an normal way:[batch_size,max_time_stpes,2]
                 tensor=logits_pph,

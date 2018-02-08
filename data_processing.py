@@ -316,19 +316,24 @@ def make_dataset(inFile,outFile):
 
     #数据集切分
     df_data_train=df_data[:50000]
-    df_data_valid=df_data[50000:66150]
-    df_data_test = df_data[66150:]
+    df_data_valid=df_data[50000:60000]
+    df_data_test = df_data[60000:]
 
 
     #保存最终数据到pkl文件
     print("----saving final dataset <"+outFile+"_summary_train.pkl>")
     df_data_train.to_pickle(path="./data/dataset/"+"/"+outFile+"_summary_train.pkl")
+    df_data_train.to_csv(path_or_buf="./data/dataset/" + outFile + "_df_data_train_final.csv", index=False, encoding="utf-8")
 
     print("----saving final dataset <"+outFile+"_summary_valida.pkl>")
     df_data_valid.to_pickle(path="./data/dataset/"+outFile+"_summary_valid.pkl")
+    df_data_valid.to_csv(path_or_buf="./data/dataset/" + outFile + "_df_data_valid_final.csv", index=False,
+                         encoding="utf-8")
 
     print("----saving final dataset <" + outFile + "_summary_test.pkl>")
     df_data_test.to_pickle(path="./data/dataset/" + "/" + outFile + "_summary_test.pkl")
+    df_data_test.to_csv(path_or_buf="./data/dataset/" + outFile + "_df_data_test_final.csv", index=False,
+                         encoding="utf-8")
 
     df_data.to_csv(path_or_buf="./data/dataset/" + outFile + "_df_data_final.csv", index=False, encoding="utf-8")
 

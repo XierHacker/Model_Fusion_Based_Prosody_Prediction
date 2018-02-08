@@ -14,7 +14,7 @@ from sklearn.metrics import f1_score
 
 class GBDT1():
     def __init__(self):
-        self.n_estimators=40
+        self.n_estimators=50
         self.learning_rate=0.05
         self.sub_sample=0.9
         self.loss_type="deviance"
@@ -61,6 +61,7 @@ if __name__=="__main__":
 
     print("run model....")
     model=GBDT1()
+    model.fit(X_train=X_train, y_train=labels_train, X_test=X_valid, y_test=labels_valid)
     model.fit(X_train=X_train,y_train=labels_train,X_test=X_test,y_test=labels_test)
 
 
