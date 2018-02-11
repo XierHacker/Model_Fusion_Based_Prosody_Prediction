@@ -15,7 +15,7 @@ class GBDT2():
     def __init__(self):
         self.n_estimators=50
         self.learning_rate=0.05
-        self.sub_sample=0.9
+        self.sub_sample=0.8
         self.loss_type="deviance"
 
         self.gbdt=GradientBoostingClassifier(

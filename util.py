@@ -8,6 +8,17 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import f1_score
 from sklearn.preprocessing import OneHotEncoder
 
+
+#load data
+#def loadData():
+
+
+
+
+
+
+
+
 #compute accuracy,precison,recall and f1
 def eval(y_true,y_pred):
     #accuracy
