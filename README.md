@@ -1,7 +1,7 @@
 ## **Requirements**
 >**python3.5+**
 
->**tensorflow>=1.4**
+>**tensorflow>=1.6**
 
 >**numpy**
 
