@@ -164,124 +164,67 @@ class CNN():
         #y_valid_iph = y_valid[2]
         # ---------------------------------------define graph---------------------------------------------#
         with self.graph.as_default():
-            # data place holder
-            self.X_p = tf.placeholder(
-                dtype=tf.int32,
-                shape=(None, self.max_sentence_size),
-                name="input_placeholder"
-            )
+            # ***********************Dataset API****************************
+            # create dataset_train object
+            dataset_train = tf.data.Dataset.from_tensor_slices(
+                tensors=(X_train, y_train_pw, y_train_pph, len_train, pos_train, length_train, position_train)
+            ).repeat().batch(batch_size=self.batch_size).shuffle(buffer_size=2)
+
+            # create iterator_train object
+            iterator_train = dataset_train.make_one_shot_iterator()
+
+            # get batch
+            batch_train = iterator_train.get_next()
+            # print("batch_train:", batch_train)
+
+            # dataset_valid=
+            # dataset_test=
+            # ***************************************************************
+
+            # ****************** data place holder***************************
+            self.X_p = tf.placeholder(dtype=tf.int32, shape=(None, self.max_sentence_size), name="input_p")
+            self.y_p_pw = tf.placeholder(dtype=tf.int32, shape=(None, self.max_sentence_size), name="label_p_pw")
+            self.y_p_pph = tf.placeholder(dtype=tf.int32, shape=(None, self.max_sentence_size), name="label_p_pph")
+            # self.y_p_iph = tf.placeholder(dtype=tf.int32,shape=(None, self.max_sentence_size),name="label_p_iph")
+
+            # 相应序列的长度占位
+            self.seq_len_p = tf.placeholder(dtype=tf.int32, shape=(None,), name="seq_len")
+
+            # 用来去掉padding的mask
+            self.mask = tf.sequence_mask(lengths=self.seq_len_p, maxlen=self.max_sentence_size, name="mask")
+
+            # 去掉padding之后的labels,shape[seq_len1+seq_len2+....+,]
+            y_p_pw_masked = tf.boolean_mask(tensor=self.y_p_pw, mask=self.mask, name="y_p_pw_masked")
+            y_p_pph_masked = tf.boolean_mask(tensor=self.y_p_pph, mask=self.mask, name="y_p_pph_masked")
+            # y_p_iph_masked = tf.boolean_mask(tensor=self.y_p_iph,mask=self.mask,name="y_p_iph_masked")
 
             # pos info placeholder
-            self.pos_p = tf.placeholder(
-                dtype=tf.int32,
-                shape=(None, self.max_sentence_size),
-                name="pos_placeholder"
-            )
+            self.pos_p = tf.placeholder(dtype=tf.int32, shape=(None, self.max_sentence_size), name="pos_p")
+            self.pos_one_hot = tf.one_hot(indices=self.pos_p, depth=self.pos_num, name="pos_one_hot")
+            # print("shape of pos_one_hot:", self.pos_one_hot.shape)
 
             # length info placeholder
-            self.length_p = tf.placeholder(
-                dtype=tf.int32,
-                shape=(None, self.max_sentence_size),
-                name="length_placeholder"
-            )
+            self.length_p = tf.placeholder(dtype=tf.int32, shape=(None, self.max_sentence_size), name="length_p")
+            self.length_one_hot = tf.one_hot(indices=self.length_p, depth=self.length_num, name="pos_one_hot")
+            # print("shape of length_one_hot:", self.length_one_hot.shape)
 
             # position info placeholder
-            self.position_p = tf.placeholder(
-                dtype=tf.int32,
-                shape=(None, self.max_sentence_size),
-                name="length_placeholder"
-            )
+            self.position_p = tf.placeholder(dtype=tf.int32, shape=(None, self.max_sentence_size), name="position_p")
+            self.position_one_hot = tf.one_hot(indices=self.position_p, depth=self.max_sentence_size,
+                                               name="pos_one_hot")
+            # print("shape of position_one_hot:", self.position_one_hot.shape)
 
-            self.y_p_pw = tf.placeholder(
-                dtype=tf.int32,
-                shape=(None, self.max_sentence_size),
-                name="label_placeholder_pw"
-            )
-            self.y_p_pph = tf.placeholder(
-                dtype=tf.int32,
-                shape=(None, self.max_sentence_size),
-                name="label_placeholder_pph"
-            )
-
-            #self.y_p_iph = tf.placeholder(
-            #    dtype=tf.int32,
-            #    shape=(None, self.max_sentence_size),
-            #    name="label_placeholder_iph"
-            #)
             # dropout 占位
             self.keep_prob_p = tf.placeholder(dtype=tf.float32, shape=[], name="keep_prob_p")
             self.input_keep_prob_p = tf.placeholder(dtype=tf.float32, shape=[], name="input_keep_prob_p")
-            self.output_keep_prob_p=tf.placeholder(dtype=tf.float32, shape=[], name="output_keep_prob_p")
+            self.output_keep_prob_p = tf.placeholder(dtype=tf.float32, shape=[], name="output_keep_prob_p")
 
-            # 相应序列的长度占位
-            self.seq_len_p = tf.placeholder(
-                dtype=tf.int32,
-                shape=(None,),
-                name="seq_len"
-            )
-
-            #用来去掉padding的mask
-            self.mask = tf.sequence_mask(
-                lengths=self.seq_len_p,
-                maxlen=self.max_sentence_size,
-                name="mask"
-            )
-
-            #去掉padding之后的labels
-            y_p_pw_masked = tf.boolean_mask(                #shape[seq_len1+seq_len2+....+,]
-                tensor=self.y_p_pw,
-                mask=self.mask,
-                name="y_p_pw_masked"
-            )
-
-            y_p_pph_masked = tf.boolean_mask(               # shape[seq_len1+seq_len2+....+,]
-                tensor=self.y_p_pph,
-                mask=self.mask,
-                name="y_p_pph_masked"
-            )
-
-            #y_p_iph_masked = tf.boolean_mask(               # shape[seq_len1+seq_len2+....+,]
-            #    tensor=self.y_p_iph,
-            #    mask=self.mask,
-            #    name="y_p_iph_masked"
-            #)
-
-            # embeddings
-            #self.embeddings = tf.Variable(
-            #    initial_value=tf.zeros(shape=(self.vocab_size, self.embedding_size), dtype=tf.float32),
-            #    name="embeddings"
-            #)
-
-            self.word_embeddings=tf.Variable(
+            # word embeddings
+            self.word_embeddings = tf.Variable(
                 initial_value=util.readEmbeddings(file="../data/embeddings/word_vec.txt"),
                 name="word_embeddings"
             )
-
-            print("word_embeddings.shape",self.word_embeddings.shape)
-
-            # pos one-hot
-            self.pos_one_hot = tf.one_hot(
-                indices=self.pos_p,
-                depth=self.pos_num,
-                name="pos_one_hot"
-            )
-            print("shape of pos_one_hot:", self.pos_one_hot.shape)
-
-            # length one-hot
-            self.length_one_hot = tf.one_hot(
-                indices=self.length_p,
-                depth=self.length_num,
-                name="pos_one_hot"
-            )
-            print("shape of length_one_hot:", self.length_one_hot.shape)
-
-            # position one-hot
-            self.position_one_hot = tf.one_hot(
-                indices=self.position_p,
-                depth=self.max_sentence_size,
-                name="pos_one_hot"
-            )
-            print("shape of position_one_hot:", self.position_one_hot.shape)
+            print("wordembedding.shape", self.word_embeddings.shape)
 
             # -------------------------------------PW-----------------------------------------------------
             # embeded inputs:[batch_size,MAX_TIME_STPES,embedding_size]
@@ -499,7 +442,6 @@ class CNN():
             # loss
             self.loss = self.loss_pw + self.loss_pph
 
-
             # optimizer
             self.optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(self.loss,global_step)
             self.init_op = tf.global_variables_initializer()
@@ -508,18 +450,17 @@ class CNN():
         # ------------------------------------Session-----------------------------------------
         with self.session as sess:
             print("Training Start")
-            sess.run(self.init_op)                      # initialize all variables
+            sess.run(self.init_op)  # initialize all variables
             sess.run(self.init_local_op)
 
             train_Size = X_train.shape[0];
-            valid_Size = X_valid.shape[0]
+            validation_Size = X_valid.shape[0]
             test_Size = X_test.shape[0]
 
-            self.best_valid_loss = 1000            # best valid accuracy in training process
-
-            #store result
-            if not os.path.exists("../result/cnn/"):
-                os.mkdir("../result/cnn/")
+            self.best_validation_loss = 1000  # best validation accuracy in training process
+            # store result
+            if not os.path.exists("../result/alignment/"):
+                os.mkdir("../result/alignment/")
 
             # epoch
             for epoch in range(1, self.max_epoch + 1):
@@ -528,49 +469,47 @@ class CNN():
                 # training loss/accuracy in every mini-batch
                 self.train_losses = []
                 self.train_accus_pw = []
-                s_accus_pw=""
-                s_loss=""
+                s_accus_pw = ""
+                s_loss = ""
                 self.train_accus_pph = []
-                #self.train_accus_iph = []
+                # self.train_accus_iph = []
 
                 self.c1_f_pw = [];
                 self.c2_f_pw = []  # each class's f1 score
                 self.c1_f_pph = [];
                 self.c2_f_pph = []
-                #self.c1_f_iph = [];
-                #self.c2_f_iph = []
-                lrs=[]
+                # self.c1_f_iph = [];
+                # self.c2_f_iph = []
+                lrs = []
 
                 # mini batch
                 for i in range(0, (train_Size // self.batch_size)):
-                    #注意:这里获取的都是mask之后的值
-                    _, train_loss, y_train_pw_masked,y_train_pph_masked,\
-                    train_pred_pw, train_pred_pph ,lr,\
-                        train_prob_pw_masked,train_prob_pph_masked= sess.run(
-                        fetches=[self.optimizer, self.loss,
-                                 y_p_pw_masked,y_p_pph_masked,
-                                 pred_pw_masked, pred_pph_masked,learning_rate,
-                                 prob_pw_masked, prob_pph_masked
-                                ],
+                    elements=sess.run(batch_train)
+                    # 注意:这里获取的都是mask之后的值
+                    _, train_loss, lr,y_train_pw_masked, y_train_pph_masked, \
+                    train_pred_pw, train_pred_pph,  \
+                    train_prob_pw_masked, train_prob_pph_masked = sess.run(
+                        fetches=[self.optimizer, self.loss,learning_rate,y_p_pw_masked, y_p_pph_masked,
+                                 pred_pw_masked, pred_pph_masked, prob_pw_masked, prob_pph_masked ],
                         feed_dict={
-                            self.X_p: X_train[i * self.batch_size:(i + 1) * self.batch_size],
-                            self.y_p_pw: y_train_pw[i * self.batch_size:(i + 1) * self.batch_size],
-                            self.y_p_pph: y_train_pph[i * self.batch_size:(i + 1) * self.batch_size],
-                            self.seq_len_p: len_train[i * self.batch_size:(i + 1) * self.batch_size],
-                            self.pos_p:pos_train[i * self.batch_size:(i + 1) * self.batch_size],
-                            self.length_p:length_train[i * self.batch_size:(i + 1) * self.batch_size],
-                            self.position_p:position_train[i * self.batch_size:(i + 1) * self.batch_size],
+                            self.X_p: elements[0],
+                            self.y_p_pw: elements[1],
+                            self.y_p_pph: elements[2],
+                            self.seq_len_p: elements[3],
+                            self.pos_p: elements[4],
+                            self.length_p: elements[5],
+                            self.position_p: elements[6],
                             self.keep_prob_p: self.keep_prob,
-                            self.input_keep_prob_p:self.input_keep_prob,
-                            self.output_keep_prob_p:self.output_keep_prob
+                            self.input_keep_prob_p: self.input_keep_prob,
+                            self.output_keep_prob_p: self.output_keep_prob
                         }
                     )
 
-                    #write the prob to files
+                    # write the prob to files
                     util.writeProb(
                         prob_pw=train_prob_pw_masked,
                         prob_pph=train_prob_pph_masked,
-                        outFile="../result/cnn/cnn_prob_train_epoch"+str(epoch)+".txt"
+                        outFile="../result/alignment/alignment_prob_train_epoch" + str(epoch) + ".txt"
                     )
 
                     lrs.append(lr)
@@ -578,31 +517,30 @@ class CNN():
                     self.train_losses.append(train_loss)
                     s_loss += (str(train_loss) + "\n")
                     # metrics
-                    accuracy_pw, f1_pw = util.eval(y_true=y_train_pw_masked,y_pred=train_pred_pw)               # pw
-                    accuracy_pph, f1_pph = util.eval(y_true=y_train_pph_masked,y_pred=train_pred_pph)           # pph
-                    #accuracy_iph, f1_1_iph, f1_2_iph = util.eval(y_true=y_train_iph_masked,y_pred=train_pred_iph)   # iph
+                    accuracy_pw, f1_pw = util.eval(y_true=y_train_pw_masked, y_pred=train_pred_pw)  # pw
+                    accuracy_pph, f1_pph = util.eval(y_true=y_train_pph_masked, y_pred=train_pred_pph)  # pph
+                    # accuracy_iph, f1_1_iph, f1_2_iph = util.eval(y_true=y_train_iph_masked,y_pred=train_pred_iph)   # iph
 
                     self.train_accus_pw.append(accuracy_pw)
-                    s_accus_pw+=(str(accuracy_pw)+"\n")
+                    s_accus_pw += (str(accuracy_pw) + "\n")
                     self.train_accus_pph.append(accuracy_pph)
-                    #self.train_accus_iph.append(accuracy_iph)
+                    # self.train_accus_iph.append(accuracy_iph)
                     # F1-score
                     self.c1_f_pw.append(f1_pw[0]);
                     self.c2_f_pw.append(f1_pw[1])
                     self.c1_f_pph.append(f1_pph[0]);
                     self.c2_f_pph.append(f1_pph[1])
-                    #self.c1_f_iph.append(f1_1_iph);
-                    #self.c2_f_iph.append(f1_2_iph)
+                    # self.c1_f_iph.append(f1_1_iph);
+                    # self.c2_f_iph.append(f1_2_iph)
 
-
-                #----------------------------------valid in every epoch----------------------------------
+                # ----------------------------------validation in every epoch----------------------------------
                 self.valid_loss, y_valid_pw_masked, y_valid_pph_masked, \
                 valid_pred_pw_masked, valid_pred_pph_masked, valid_pred_pw, valid_pred_pph, \
-                valid_prob_pw_masked, valid_prob_pph_masked= sess.run(
+                valid_prob_pw_masked, valid_prob_pph_masked = sess.run(
                     fetches=[self.loss, y_p_pw_masked, y_p_pph_masked,
-                             pred_pw_masked, pred_pph_masked,pred_pw, pred_pph,
+                             pred_pw_masked, pred_pph_masked, pred_pw, pred_pph,
                              prob_pw_masked, prob_pph_masked
-                        ],
+                             ],
                     feed_dict={
                         self.X_p: X_valid,
                         self.y_p_pw: y_valid_pw,
@@ -620,7 +558,7 @@ class CNN():
                 util.writeProb(
                     prob_pw=valid_prob_pw_masked,
                     prob_pph=valid_prob_pph_masked,
-                    outFile="../result/cnn/cnn_prob_valid_epoch" + str(epoch) + ".txt"
+                    outFile="../result/alignment/alignment_prob_valid_epoch" + str(epoch) + ".txt"
                 )
 
                 # metrics
@@ -638,9 +576,9 @@ class CNN():
                     X=X_valid,
                     preds_pw=valid_pred_pw,
                     preds_pph=valid_pred_pph,
-                    filename="../result/cnn/valid_recover_epoch_" + str(epoch) + ".txt"
+                    filename="../result/alignment/valid_recover_epoch_" + str(epoch) + ".txt"
                 )
-                #----------------------------------------------------------------------------------------
+                # ----------------------------------------------------------------------------------------
 
                 # ----------------------------------test in every epoch----------------------------------
                 self.test_loss, y_test_pw_masked, y_test_pph_masked, \
@@ -667,7 +605,7 @@ class CNN():
                 util.writeProb(
                     prob_pw=test_prob_pw_masked,
                     prob_pph=test_prob_pph_masked,
-                    outFile="../result/cnn/cnn_prob_test_epoch" + str(epoch) + ".txt"
+                    outFile="../result/alignment/alignment_prob_test_epoch" + str(epoch) + ".txt"
                 )
 
                 # metrics
@@ -685,7 +623,7 @@ class CNN():
                     X=X_test,
                     preds_pw=test_pred_pw,
                     preds_pph=test_pred_pph,
-                    filename="../result/cnn/test_recover_epoch_" + str(epoch) + ".txt"
+                    filename="../result/alignment/test_recover_epoch_" + str(epoch) + ".txt"
                 )
                 # -----------------------------------------------------------------------------------
 
@@ -698,17 +636,17 @@ class CNN():
                 self.showInfo(type="valid")
                 self.showInfo(type="test")
 
-                f=open(file="../result/cnn/train_accuracy_epoch"+str(epoch)+".txt",mode="w")
+                f = open(file="../result/alignment/train_accuracy_epoch" + str(epoch) + ".txt", mode="w")
                 f.write(s_accus_pw)
                 f.close()
-                f = open(file="../result/cnn/train_loss_epoch" + str(epoch) + ".txt", mode="w")
+                f = open(file="../result/alignment/train_loss_epoch" + str(epoch) + ".txt", mode="w")
                 f.write(s_loss)
                 f.close()
 
-                # when we get a new best valid accuracy,we store the model
-                if self.best_valid_loss < self.valid_loss:
-                    self.best_valid_loss = self.valid_loss
-                    print("New Best loss ", self.best_valid_loss, " On valid set! ")
+                # when we get a new best validation accuracy,we store the model
+                if self.best_validation_loss < self.valid_loss:
+                    self.best_validation_loss = self.valid_loss
+                    print("New Best loss ", self.best_validation_loss, " On Validation set! ")
                     print("Saving Models......\n\n")
                     # exist ./models folder?
                     if not os.path.exists("./models/"):
