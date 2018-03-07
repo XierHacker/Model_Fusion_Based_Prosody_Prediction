@@ -2,6 +2,7 @@
     model with CWS and pos information
 '''
 import sys
+
 sys.path.append("..")
 import numpy as np
 import pandas as pd
@@ -12,6 +13,7 @@ import time
 import os
 import parameter
 import util
+
 
 class Alignment():
     def __init__(self):
@@ -24,29 +26,28 @@ class Alignment():
         self.max_epoch = parameter.MAX_EPOCH
 
         self.class_num = parameter.CLASS_NUM
-        self.pos_num=parameter.POS_NUM
-        self.length_num=parameter.LENGTH_NUM
+        self.pos_num = parameter.POS_NUM
+        self.length_num = parameter.LENGTH_NUM
         self.hidden_units_num = parameter.HIDDEN_UNITS_NUM
         self.hidden_units_num2 = parameter.HIDDEN_UNITS_NUM2
         self.layer_num = parameter.LAYER_NUM
         self.max_sentence_size = parameter.MAX_SENTENCE_SIZE
 
-        #self.vocab_size = parameter.VOCAB_SIZE
-        self.word_vocab_size=parameter.WORD_VOCAB_SIZE
+        # self.vocab_size = parameter.VOCAB_SIZE
+        self.word_vocab_size = parameter.WORD_VOCAB_SIZE
         self.embedding_size = parameter.CHAR_EMBEDDING_SIZE
-        self.word_embedding_size=parameter.WORD_EMBEDDING_SIZE
+        self.word_embedding_size = parameter.WORD_EMBEDDING_SIZE
 
         self.batch_size = parameter.BATCH_SIZE
-        self.lambda_pw=parameter.LAMBDA_PW
-        self.lambda_pph=parameter.LAMBDA_PPH
-        self.lambda_iph=parameter.LAMBDA_IPH
+        self.lambda_pw = parameter.LAMBDA_PW
+        self.lambda_pph = parameter.LAMBDA_PPH
+        self.lambda_iph = parameter.LAMBDA_IPH
 
         self.keep_prob = parameter.KEEP_PROB
-        self.input_keep_prob=parameter.INPUT_KEEP_PROB
-        self.output_keep_prob=parameter.OUTPUT_KEEP_PROB
+        self.input_keep_prob = parameter.INPUT_KEEP_PROB
+        self.output_keep_prob = parameter.OUTPUT_KEEP_PROB
 
-        self.decay_rate=parameter.DECAY
-
+        self.decay_rate = parameter.DECAY
 
     # encoder,传入是前向和后向的cell,还有inputs
     def encoder(self, cell_forward, cell_backward, inputs, seq_length, scope_name):
@@ -62,18 +63,18 @@ class Alignment():
         outputs_backward = outputs[1]  # shape of h is [batch_size, max_time, cell_bw.output_size]
         states_forward = states[0]  # .c:[batch_size,num_units]   .h:[batch_size,num_units]
         states_backward = states[1]
-        #concat final outputs [batch_size, max_time, cell_fw.output_size*2]
+        # concat final outputs [batch_size, max_time, cell_fw.output_size*2]
         encoder_outputs = tf.concat(values=[outputs_forward, outputs_backward], axis=2)
-        #concat final states
-        state_h_concat=tf.concat(values=[states_forward.h,states_backward.h],axis=1,name="state_h_concat")
-        #print("state_h_concat:",state_h_concat)
-        state_c_concat=tf.concat(values=[states_forward.c,states_backward.c],axis=1,name="state_c_concat")
-        #print("state_c_concat:",state_c_concat)
-        encoder_states=rnn.LSTMStateTuple(c=state_c_concat,h=state_h_concat)
+        # concat final states
+        state_h_concat = tf.concat(values=[states_forward.h, states_backward.h], axis=1, name="state_h_concat")
+        # print("state_h_concat:",state_h_concat)
+        state_c_concat = tf.concat(values=[states_forward.c, states_backward.c], axis=1, name="state_c_concat")
+        # print("state_c_concat:",state_c_concat)
+        encoder_states = rnn.LSTMStateTuple(c=state_c_concat, h=state_h_concat)
 
         return encoder_outputs, encoder_states
 
-    #decoder
+    # decoder
     def decoder(self, cell, initial_state, inputs, scope_name):
         # outputs:[batch_size,time_steps,hidden_size*2]
         outputs, states = tf.nn.dynamic_rnn(
@@ -82,15 +83,15 @@ class Alignment():
             initial_state=initial_state,
             scope=scope_name
         )
-        #[batch_size*time_steps,hidden_size*2]
-        decoder_outputs = tf.reshape(tensor=outputs, shape=(-1, self.hidden_units_num*2))
+        # [batch_size*time_steps,hidden_size*2]
+        decoder_outputs = tf.reshape(tensor=outputs, shape=(-1, self.hidden_units_num * 2))
         return decoder_outputs
 
     # forward process and training process
-    def fit(self, X_train, y_train, len_train, pos_train,length_train,position_train,
-            X_valid, y_valid, len_valid, pos_valid,length_valid,position_valid,
-            X_test, y_test, len_test, pos_test, length_test, position_test,name, print_log=True):
-        #handle data
+    def fit(self, X_train, y_train, len_train, pos_train, length_train, position_train,
+            X_valid, y_valid, len_valid, pos_valid, length_valid, position_valid,
+            X_test, y_test, len_test, pos_test, length_test, position_test, name, print_log=True):
+        # handle data
         y_train_pw = y_train[0]
         y_train_pph = y_train[1]
         # y_train_iph = y_train[2]
@@ -103,133 +104,76 @@ class Alignment():
         y_test_pph = y_test[1]
         # y_valid_iph = y_valid[2]
 
+
         # ------------------------------------------define graph---------------------------------------------#
         with self.graph.as_default():
-            # data place holder
-            self.X_p = tf.placeholder(
-                dtype=tf.int32,
-                shape=(None, self.max_sentence_size),
-                name="input_placeholder"
-            )
+            #***********************Dataset API****************************
+            # create dataset_train object
+            dataset_train = tf.data.Dataset.from_tensor_slices(
+                tensors=(X_train, y_train_pw, y_train_pph, len_train, pos_train, length_train, position_train)
+            ).repeat().batch(batch_size=self.batch_size).shuffle(buffer_size=2)
 
-            #pos info placeholder
-            self.pos_p=tf.placeholder(
-                dtype=tf.int32,
-                shape=(None,self.max_sentence_size),
-                name="pos_placeholder"
-            )
+            # create iterator_train object
+            iterator_train = dataset_train.make_one_shot_iterator()
+
+            # get batch
+            batch_train = iterator_train.get_next()
+            #print("batch_train:", batch_train)
+
+            # dataset_valid=
+            # dataset_test=
+            #***************************************************************
+
+            #****************** data place holder***************************
+            self.X_p = tf.placeholder(dtype=tf.int32,shape=(None, self.max_sentence_size),name="input_p")
+            self.y_p_pw = tf.placeholder(dtype=tf.int32,shape=(None, self.max_sentence_size),name="label_p_pw")
+            self.y_p_pph = tf.placeholder(dtype=tf.int32,shape=(None, self.max_sentence_size),name="label_p_pph")
+            #self.y_p_iph = tf.placeholder(dtype=tf.int32,shape=(None, self.max_sentence_size),name="label_p_iph")
+
+            # 相应序列的长度占位
+            self.seq_len_p = tf.placeholder(dtype=tf.int32, shape=(None,), name="seq_len")
+
+            # 用来去掉padding的mask
+            self.mask = tf.sequence_mask(lengths=self.seq_len_p,maxlen=self.max_sentence_size,name="mask")
+
+            # 去掉padding之后的labels,shape[seq_len1+seq_len2+....+,]
+            y_p_pw_masked = tf.boolean_mask(tensor=self.y_p_pw,mask=self.mask,name="y_p_pw_masked")
+            y_p_pph_masked = tf.boolean_mask(tensor=self.y_p_pph,mask=self.mask,name="y_p_pph_masked")
+            # y_p_iph_masked = tf.boolean_mask(tensor=self.y_p_iph,mask=self.mask,name="y_p_iph_masked")
+
+            # pos info placeholder
+            self.pos_p = tf.placeholder(dtype=tf.int32,shape=(None, self.max_sentence_size),name="pos_p")
+            self.pos_one_hot = tf.one_hot(indices=self.pos_p, depth=self.pos_num, name="pos_one_hot")
+            #print("shape of pos_one_hot:", self.pos_one_hot.shape)
 
             # length info placeholder
-            self.length_p = tf.placeholder(
-                dtype=tf.int32,
-                shape=(None, self.max_sentence_size),
-                name="length_placeholder"
-            )
+            self.length_p = tf.placeholder(dtype=tf.int32,shape=(None, self.max_sentence_size),name="length_p")
+            self.length_one_hot = tf.one_hot(indices=self.length_p, depth=self.length_num, name="pos_one_hot")
+            #print("shape of length_one_hot:", self.length_one_hot.shape)
 
             # position info placeholder
-            self.position_p = tf.placeholder(
-                dtype=tf.int32,
-                shape=(None, self.max_sentence_size),
-                name="length_placeholder"
-            )
-
-            self.y_p_pw = tf.placeholder(
-                dtype=tf.int32,
-                shape=(None, self.max_sentence_size),
-                name="label_placeholder_pw"
-            )
-            self.y_p_pph = tf.placeholder(
-                dtype=tf.int32,
-                shape=(None, self.max_sentence_size),
-                name="label_placeholder_pph"
-            )
-
-            #self.y_p_iph = tf.placeholder(
-            #    dtype=tf.int32,
-            #    shape=(None, self.max_sentence_size),
-            #    name="label_placeholder_iph"
-            #)
+            self.position_p = tf.placeholder(dtype=tf.int32,shape=(None, self.max_sentence_size),name="position_p")
+            self.position_one_hot = tf.one_hot(indices=self.position_p, depth=self.max_sentence_size,name="pos_one_hot")
+            #print("shape of position_one_hot:", self.position_one_hot.shape)
 
             # dropout 占位
-            self.keep_prob_p=tf.placeholder(dtype=tf.float32, shape=[], name="keep_prob_p")
+            self.keep_prob_p = tf.placeholder(dtype=tf.float32, shape=[], name="keep_prob_p")
             self.input_keep_prob_p = tf.placeholder(dtype=tf.float32, shape=[], name="input_keep_prob_p")
             self.output_keep_prob_p = tf.placeholder(dtype=tf.float32, shape=[], name="output_keep_prob_p")
 
-            # 相应序列的长度占位
-            self.seq_len_p = tf.placeholder(
-                dtype=tf.int32,
-                shape=(None,),
-                name="seq_len"
-            )
-
-            #用来去掉padding的mask
-            self.mask = tf.sequence_mask(
-                lengths=self.seq_len_p,
-                maxlen=self.max_sentence_size,
-                name="mask"
-            )
-
-            #去掉padding之后的labels
-            y_p_pw_masked = tf.boolean_mask(                #shape[seq_len1+seq_len2+....+,]
-                tensor=self.y_p_pw,
-                mask=self.mask,
-                name="y_p_pw_masked"
-            )
-            y_p_pph_masked = tf.boolean_mask(               # shape[seq_len1+seq_len2+....+,]
-                tensor=self.y_p_pph,
-                mask=self.mask,
-                name="y_p_pph_masked"
-            )
-
-            #y_p_iph_masked = tf.boolean_mask(               # shape[seq_len1+seq_len2+....+,]
-            #    tensor=self.y_p_iph,
-            #    mask=self.mask,
-            #    name="y_p_iph_masked"
-            #)
-
-            # char embeddings
-            #self.embeddings = tf.Variable(
-            #    initial_value=tf.zeros(shape=(self.vocab_size, self.embedding_size), dtype=tf.float32),
-            #    name="embeddings"
-            #)
-
-            #word embeddings
-            self.word_embeddings=tf.Variable(
+            # word embeddings
+            self.word_embeddings = tf.Variable(
                 initial_value=util.readEmbeddings(file="../data/embeddings/word_vec.txt"),
                 name="word_embeddings"
             )
-            print("wordembedding.shape",self.word_embeddings.shape)
-
-            #pos one-hot
-            self.pos_one_hot=tf.one_hot(
-                indices=self.pos_p,
-                depth=self.pos_num,
-                name="pos_one_hot"
-            )
-            print("shape of pos_one_hot:",self.pos_one_hot.shape)
-
-            # length one-hot
-            self.length_one_hot = tf.one_hot(
-                indices=self.length_p,
-                depth=self.length_num,
-                name="pos_one_hot"
-            )
-            print("shape of length_one_hot:", self.length_one_hot.shape)
-
-            # position one-hot
-            self.position_one_hot = tf.one_hot(
-                indices=self.position_p,
-                depth=self.max_sentence_size,
-                name="pos_one_hot"
-            )
-            print("shape of position_one_hot:", self.position_one_hot.shape)
+            print("wordembedding.shape", self.word_embeddings.shape)
 
             # -------------------------------------PW-----------------------------------------------------
             # embeded inputs:[batch_size,MAX_TIME_STPES,embedding_size]
             inputs_pw = tf.nn.embedding_lookup(params=self.word_embeddings, ids=self.X_p, name="embeded_input_pw")
-            print("shape of inputs_pw:",inputs_pw.shape)
-            inputs_pw=tf.concat(
-                values=[inputs_pw,self.pos_one_hot,self.length_one_hot,self.position_one_hot],
+            print("shape of inputs_pw:", inputs_pw.shape)
+            inputs_pw = tf.concat(
+                values=[inputs_pw, self.pos_one_hot, self.length_one_hot, self.position_one_hot],
                 axis=2,
                 name="input_pw"
             )
@@ -240,8 +184,8 @@ class Alignment():
             en_lstm_forward1_pw = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
             # en_lstm_forward2=rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
             # en_lstm_forward=rnn.MultiRNNCell(cells=[en_lstm_forward1,en_lstm_forward2])
-            #dropout
-            en_lstm_forward1_pw=rnn.DropoutWrapper(
+            # dropout
+            en_lstm_forward1_pw = rnn.DropoutWrapper(
                 cell=en_lstm_forward1_pw,
                 input_keep_prob=self.input_keep_prob_p,
                 output_keep_prob=self.output_keep_prob_p
@@ -251,15 +195,15 @@ class Alignment():
             en_lstm_backward1_pw = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
             # en_lstm_backward2=rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
             # en_lstm_backward=rnn.MultiRNNCell(cells=[en_lstm_backward1,en_lstm_backward2])
-            en_lstm_backward1_pw=rnn.DropoutWrapper(
+            en_lstm_backward1_pw = rnn.DropoutWrapper(
                 cell=en_lstm_backward1_pw,
                 input_keep_prob=self.input_keep_prob_p,
                 output_keep_prob=self.output_keep_prob_p
             )
 
             # decoder cells
-            de_lstm_pw = rnn.BasicLSTMCell(num_units=self.hidden_units_num*2)
-            de_lstm_pw=rnn.DropoutWrapper(
+            de_lstm_pw = rnn.BasicLSTMCell(num_units=self.hidden_units_num * 2)
+            de_lstm_pw = rnn.DropoutWrapper(
                 cell=de_lstm_pw,
                 input_keep_prob=self.input_keep_prob_p,
                 output_keep_prob=self.output_keep_prob_p
@@ -274,46 +218,46 @@ class Alignment():
                 scope_name="en_lstm_pw"
             )
             # decode
-            h_pw = self.decoder(                    # shape of h is [batch*time_steps,hidden_units*2]
+            h_pw = self.decoder(  # shape of h is [batch*time_steps,hidden_units*2]
                 cell=de_lstm_pw,
                 initial_state=encoder_states_pw,
                 inputs=encoder_outputs_pw,
                 scope_name="de_lstm_pw"
             )
 
-            #全连接dropout
-            h_pw=tf.nn.dropout(x=h_pw,keep_prob=self.keep_prob_p,name="dropout_h_pw")
+            # 全连接dropout
+            h_pw = tf.nn.dropout(x=h_pw, keep_prob=self.keep_prob_p, name="dropout_h_pw")
 
             # fully connect layer(projection)
             w_pw = tf.Variable(
-                initial_value=tf.random_normal(shape=(self.hidden_units_num*2, self.class_num)),
+                initial_value=tf.random_normal(shape=(self.hidden_units_num * 2, self.class_num)),
                 name="weights_pw"
             )
             b_pw = tf.Variable(
                 initial_value=tf.random_normal(shape=(self.class_num,)),
                 name="bias_pw"
             )
-            #logits
-            logits_pw = tf.matmul(h_pw, w_pw) + b_pw        #logits_pw:[batch_size*max_time, 2]
-            logits_normal_pw=tf.reshape(                    #logits in an normal way:[batch_size,max_time_stpes,2]
+            # logits
+            logits_pw = tf.matmul(h_pw, w_pw) + b_pw  # logits_pw:[batch_size*max_time, 2]
+            logits_normal_pw = tf.reshape(  # logits in an normal way:[batch_size,max_time_stpes,2]
                 tensor=logits_pw,
-                shape=(-1,self.max_sentence_size,self.class_num),
+                shape=(-1, self.max_sentence_size, self.class_num),
                 name="logits_normal_pw"
             )
-            logits_pw_masked = tf.boolean_mask(             # logits_pw_masked [seq_len1+seq_len2+..+seq_lenn, 2]
+            logits_pw_masked = tf.boolean_mask(  # logits_pw_masked [seq_len1+seq_len2+..+seq_lenn, 2]
                 tensor=logits_normal_pw,
                 mask=self.mask,
                 name="logits_pw_masked"
             )
-            print("logits_pw_masked.shape",logits_pw_masked.shape)
+            print("logits_pw_masked.shape", logits_pw_masked.shape)
 
-            #softmax
-            prob_pw_masked=tf.nn.softmax(logits=logits_pw_masked,dim=-1,name="prob_pw_masked")
-            print("prob_pw_masked.shape",prob_pw_masked.shape)
+            # softmax
+            prob_pw_masked = tf.nn.softmax(logits=logits_pw_masked, dim=-1, name="prob_pw_masked")
+            print("prob_pw_masked.shape", prob_pw_masked.shape)
 
             # prediction
-            pred_pw = tf.cast(tf.argmax(logits_pw, 1), tf.int32, name="pred_pw")   # pred_pw:[batch_size*max_time,]
-            pred_normal_pw = tf.reshape(                    # pred in an normal way,[batch_size, max_time]
+            pred_pw = tf.cast(tf.argmax(logits_pw, 1), tf.int32, name="pred_pw")  # pred_pw:[batch_size*max_time,]
+            pred_normal_pw = tf.reshape(  # pred in an normal way,[batch_size, max_time]
                 tensor=pred_pw,
                 shape=(-1, self.max_sentence_size),
                 name="pred_normal_pw"
@@ -325,7 +269,7 @@ class Alignment():
                 name="pred_pw_masked"
             )
 
-            pred_normal_one_hot_pw = tf.one_hot(            # one-hot the pred_normal:[batch_size, max_time,class_num]
+            pred_normal_one_hot_pw = tf.one_hot(  # one-hot the pred_normal:[batch_size, max_time,class_num]
                 indices=pred_normal_pw,
                 depth=self.class_num,
                 name="pred_normal_one_hot_pw"
@@ -335,29 +279,28 @@ class Alignment():
             self.loss_pw = tf.losses.sparse_softmax_cross_entropy(
                 labels=y_p_pw_masked,
                 logits=logits_pw_masked
-            )+tf.contrib.layers.l2_regularizer(self.lambda_pw)(w_pw)
+            ) + tf.contrib.layers.l2_regularizer(self.lambda_pw)(w_pw)
             # ---------------------------------------------------------------------------------------
-
 
             # ----------------------------------PPH--------------------------------------------------
             # embeded inputs:[batch_size,MAX_TIME_STPES,embedding_size]
             inputs_pph = tf.nn.embedding_lookup(params=self.word_embeddings, ids=self.X_p, name="embeded_input_pph")
             print("input_pph.shape", inputs_pph.shape)
-            #concat all information
-            inputs_pph=tf.concat(
-                values=[inputs_pph,self.pos_one_hot,self.length_one_hot,self.position_one_hot,pred_normal_one_hot_pw],
+            # concat all information
+            inputs_pph = tf.concat(
+                values=[inputs_pph, self.pos_one_hot, self.length_one_hot, self.position_one_hot,
+                        pred_normal_one_hot_pw],
                 axis=2,
                 name="inputs_pph"
             )
             print("shape of input_pph:", inputs_pph.shape)
-
 
             # encoder cells
             # forward part
             en_lstm_forward1_pph = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
             # en_lstm_forward2=rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
             # en_lstm_forward=rnn.MultiRNNCell(cells=[en_lstm_forward1,en_lstm_forward2])
-            en_lstm_forward1_pph=rnn.DropoutWrapper(
+            en_lstm_forward1_pph = rnn.DropoutWrapper(
                 cell=en_lstm_forward1_pph,
                 input_keep_prob=self.input_keep_prob_p,
                 output_keep_prob=self.output_keep_prob_p
@@ -372,7 +315,7 @@ class Alignment():
                 output_keep_prob=self.output_keep_prob_p
             )
             # decoder cells
-            de_lstm_pph = rnn.BasicLSTMCell(num_units=self.hidden_units_num*2)
+            de_lstm_pph = rnn.BasicLSTMCell(num_units=self.hidden_units_num * 2)
             de_lstm_pph = rnn.DropoutWrapper(
                 cell=de_lstm_pph,
                 input_keep_prob=self.input_keep_prob_p,
@@ -399,7 +342,7 @@ class Alignment():
 
             # fully connect layer(projection)
             w_pph = tf.Variable(
-                initial_value=tf.random_normal(shape=(self.hidden_units_num*2, self.class_num)),
+                initial_value=tf.random_normal(shape=(self.hidden_units_num * 2, self.class_num)),
                 name="weights_pph"
             )
             b_pph = tf.Variable(
@@ -408,12 +351,12 @@ class Alignment():
             )
             # logits
             logits_pph = tf.matmul(h_pph, w_pph) + b_pph  # shape of logits:[batch_size*max_time, 3]
-            logits_normal_pph = tf.reshape(                 # logits in an normal way:[batch_size,max_time_stpes,3]
+            logits_normal_pph = tf.reshape(  # logits in an normal way:[batch_size,max_time_stpes,3]
                 tensor=logits_pph,
                 shape=(-1, self.max_sentence_size, self.class_num),
                 name="logits_normal_pph"
             )
-            logits_pph_masked = tf.boolean_mask(            # [seq_len1+seq_len2+....+,3]
+            logits_pph_masked = tf.boolean_mask(  # [seq_len1+seq_len2+....+,3]
                 tensor=logits_normal_pph,
                 mask=self.mask,
                 name="logits_pph_masked"
@@ -425,17 +368,17 @@ class Alignment():
 
             # prediction
             pred_pph = tf.cast(tf.argmax(logits_pph, 1), tf.int32, name="pred_pph")  # pred_pph:[batch_size*max_time,]
-            pred_normal_pph = tf.reshape(                       # pred in an normal way,[batch_size, max_time]
+            pred_normal_pph = tf.reshape(  # pred in an normal way,[batch_size, max_time]
                 tensor=pred_pph,
                 shape=(-1, self.max_sentence_size),
                 name="pred_normal_pph"
             )
-            pred_pph_masked = tf.boolean_mask(                  # logits_pph_masked [seq_len1+seq_len2+....+,]
+            pred_pph_masked = tf.boolean_mask(  # logits_pph_masked [seq_len1+seq_len2+....+,]
                 tensor=pred_normal_pph,
                 mask=self.mask,
                 name="pred_pph_masked"
             )
-            pred_normal_one_hot_pph = tf.one_hot(               # one-hot the pred_normal:[batch_size, max_time,class_num]
+            pred_normal_one_hot_pph = tf.one_hot(  # one-hot the pred_normal:[batch_size, max_time,class_num]
                 indices=pred_normal_pph,
                 depth=self.class_num,
                 name="pred_normal_one_hot_pph"
@@ -445,7 +388,7 @@ class Alignment():
             self.loss_pph = tf.losses.sparse_softmax_cross_entropy(
                 labels=y_p_pph_masked,
                 logits=logits_pph_masked
-            )+tf.contrib.layers.l2_regularizer(self.lambda_pph)(w_pph)
+            ) + tf.contrib.layers.l2_regularizer(self.lambda_pph)(w_pph)
             # ------------------------------------------------------------------------------------
 
             '''
@@ -538,7 +481,7 @@ class Alignment():
             learning_rate = tf.train.exponential_decay(
                 learning_rate=start_learning_rate,
                 global_step=global_step,
-                decay_steps=(X_train.shape[0]//self.batch_size)+1,
+                decay_steps=(X_train.shape[0] // self.batch_size) + 1,
                 decay_rate=self.decay_rate,
                 staircase=True,
                 name="decay_learning_rate"
@@ -548,23 +491,23 @@ class Alignment():
             self.loss = self.loss_pw + self.loss_pph
 
             # optimizer
-            self.optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(self.loss,global_step=global_step)
+            self.optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(self.loss,
+                                                                                          global_step=global_step)
             self.init_op = tf.global_variables_initializer()
             self.init_local_op = tf.local_variables_initializer()
 
         # --------------------------------------------Session-------------------------------------------------
         with self.session as sess:
             print("Training Start")
-            sess.run(self.init_op)                      # initialize all variables
+            sess.run(self.init_op)  # initialize all variables
             sess.run(self.init_local_op)
 
             train_Size = X_train.shape[0];
             validation_Size = X_valid.shape[0]
             test_Size = X_test.shape[0]
 
-            self.best_validation_loss = 1000            # best validation accuracy in training process
-
-            #store result
+            self.best_validation_loss = 1000  # best validation accuracy in training process
+            # store result
             if not os.path.exists("../result/alignment/"):
                 os.mkdir("../result/alignment/")
 
@@ -575,49 +518,47 @@ class Alignment():
                 # training loss/accuracy in every mini-batch
                 self.train_losses = []
                 self.train_accus_pw = []
-                s_accus_pw=""
-                s_loss=""
+                s_accus_pw = ""
+                s_loss = ""
                 self.train_accus_pph = []
-                #self.train_accus_iph = []
+                # self.train_accus_iph = []
 
                 self.c1_f_pw = [];
                 self.c2_f_pw = []  # each class's f1 score
                 self.c1_f_pph = [];
                 self.c2_f_pph = []
-                #self.c1_f_iph = [];
-                #self.c2_f_iph = []
-                lrs=[]
+                # self.c1_f_iph = [];
+                # self.c2_f_iph = []
+                lrs = []
 
                 # mini batch
                 for i in range(0, (train_Size // self.batch_size)):
-                    #注意:这里获取的都是mask之后的值
-                    _, train_loss, y_train_pw_masked,y_train_pph_masked,\
-                    train_pred_pw, train_pred_pph ,lr,\
-                        train_prob_pw_masked,train_prob_pph_masked= sess.run(
-                        fetches=[self.optimizer, self.loss,
-                                 y_p_pw_masked,y_p_pph_masked,
-                                 pred_pw_masked, pred_pph_masked,learning_rate,
-                                 prob_pw_masked, prob_pph_masked
-                                ],
+                    elements=sess.run(batch_train)
+                    # 注意:这里获取的都是mask之后的值
+                    _, train_loss, lr,y_train_pw_masked, y_train_pph_masked, \
+                    train_pred_pw, train_pred_pph,  \
+                    train_prob_pw_masked, train_prob_pph_masked = sess.run(
+                        fetches=[self.optimizer, self.loss,learning_rate,y_p_pw_masked, y_p_pph_masked,
+                                 pred_pw_masked, pred_pph_masked, prob_pw_masked, prob_pph_masked ],
                         feed_dict={
-                            self.X_p: X_train[i * self.batch_size:(i + 1) * self.batch_size],
-                            self.y_p_pw: y_train_pw[i * self.batch_size:(i + 1) * self.batch_size],
-                            self.y_p_pph: y_train_pph[i * self.batch_size:(i + 1) * self.batch_size],
-                            self.seq_len_p: len_train[i * self.batch_size:(i + 1) * self.batch_size],
-                            self.pos_p:pos_train[i * self.batch_size:(i + 1) * self.batch_size],
-                            self.length_p:length_train[i * self.batch_size:(i + 1) * self.batch_size],
-                            self.position_p:position_train[i * self.batch_size:(i + 1) * self.batch_size],
+                            self.X_p: elements[0],
+                            self.y_p_pw: elements[1],
+                            self.y_p_pph: elements[2],
+                            self.seq_len_p: elements[3],
+                            self.pos_p: elements[4],
+                            self.length_p: elements[5],
+                            self.position_p: elements[6],
                             self.keep_prob_p: self.keep_prob,
-                            self.input_keep_prob_p:self.input_keep_prob,
-                            self.output_keep_prob_p:self.output_keep_prob
+                            self.input_keep_prob_p: self.input_keep_prob,
+                            self.output_keep_prob_p: self.output_keep_prob
                         }
                     )
 
-                    #write the prob to files
+                    # write the prob to files
                     util.writeProb(
                         prob_pw=train_prob_pw_masked,
                         prob_pph=train_prob_pph_masked,
-                        outFile="../result/alignment/alignment_prob_train_epoch"+str(epoch)+".txt"
+                        outFile="../result/alignment/alignment_prob_train_epoch" + str(epoch) + ".txt"
                     )
 
                     lrs.append(lr)
@@ -625,31 +566,30 @@ class Alignment():
                     self.train_losses.append(train_loss)
                     s_loss += (str(train_loss) + "\n")
                     # metrics
-                    accuracy_pw, f1_pw = util.eval(y_true=y_train_pw_masked,y_pred=train_pred_pw)               # pw
-                    accuracy_pph, f1_pph = util.eval(y_true=y_train_pph_masked,y_pred=train_pred_pph)           # pph
-                    #accuracy_iph, f1_1_iph, f1_2_iph = util.eval(y_true=y_train_iph_masked,y_pred=train_pred_iph)   # iph
+                    accuracy_pw, f1_pw = util.eval(y_true=y_train_pw_masked, y_pred=train_pred_pw)  # pw
+                    accuracy_pph, f1_pph = util.eval(y_true=y_train_pph_masked, y_pred=train_pred_pph)  # pph
+                    # accuracy_iph, f1_1_iph, f1_2_iph = util.eval(y_true=y_train_iph_masked,y_pred=train_pred_iph)   # iph
 
                     self.train_accus_pw.append(accuracy_pw)
-                    s_accus_pw+=(str(accuracy_pw)+"\n")
+                    s_accus_pw += (str(accuracy_pw) + "\n")
                     self.train_accus_pph.append(accuracy_pph)
-                    #self.train_accus_iph.append(accuracy_iph)
+                    # self.train_accus_iph.append(accuracy_iph)
                     # F1-score
                     self.c1_f_pw.append(f1_pw[0]);
                     self.c2_f_pw.append(f1_pw[1])
                     self.c1_f_pph.append(f1_pph[0]);
                     self.c2_f_pph.append(f1_pph[1])
-                    #self.c1_f_iph.append(f1_1_iph);
-                    #self.c2_f_iph.append(f1_2_iph)
+                    # self.c1_f_iph.append(f1_1_iph);
+                    # self.c2_f_iph.append(f1_2_iph)
 
-
-                #----------------------------------validation in every epoch----------------------------------
+                # ----------------------------------validation in every epoch----------------------------------
                 self.valid_loss, y_valid_pw_masked, y_valid_pph_masked, \
                 valid_pred_pw_masked, valid_pred_pph_masked, valid_pred_pw, valid_pred_pph, \
-                valid_prob_pw_masked, valid_prob_pph_masked= sess.run(
+                valid_prob_pw_masked, valid_prob_pph_masked = sess.run(
                     fetches=[self.loss, y_p_pw_masked, y_p_pph_masked,
-                             pred_pw_masked, pred_pph_masked,pred_pw, pred_pph,
+                             pred_pw_masked, pred_pph_masked, pred_pw, pred_pph,
                              prob_pw_masked, prob_pph_masked
-                        ],
+                             ],
                     feed_dict={
                         self.X_p: X_valid,
                         self.y_p_pw: y_valid_pw,
@@ -687,7 +627,7 @@ class Alignment():
                     preds_pph=valid_pred_pph,
                     filename="../result/alignment/valid_recover_epoch_" + str(epoch) + ".txt"
                 )
-                #----------------------------------------------------------------------------------------
+                # ----------------------------------------------------------------------------------------
 
                 # ----------------------------------test in every epoch----------------------------------
                 self.test_loss, y_test_pw_masked, y_test_pph_masked, \
@@ -745,7 +685,7 @@ class Alignment():
                 self.showInfo(type="validation")
                 self.showInfo(type="test")
 
-                f=open(file="../result/alignment/train_accuracy_epoch"+str(epoch)+".txt",mode="w")
+                f = open(file="../result/alignment/train_accuracy_epoch" + str(epoch) + ".txt", mode="w")
                 f.write(s_accus_pw)
                 f.close()
                 f = open(file="../result/alignment/train_loss_epoch" + str(epoch) + ".txt", mode="w")
@@ -770,7 +710,7 @@ class Alignment():
                     # Generates MetaGraphDef.
                     saver.export_meta_graph("./models/" + name + "/bilstm/my-model-10000.meta")
                 print("\n\n")
-        
+
 
     # 返回预测的结果或者准确率,y not None的时候返回准确率,y ==None的时候返回预测值
     def pred(self, name, X, y=None, ):
@@ -809,7 +749,6 @@ class Alignment():
                 print("this operation spends ", round((time.time() - start_time) / 60, 2), " mins")
                 return accu
 
-
     def showInfo(self, type):
         if type == "training":
             # training information
@@ -817,31 +756,31 @@ class Alignment():
             print("----avarage training loss:", sum(self.train_losses) / len(self.train_losses))
             print("PW:")
             print("----avarage accuracy:", sum(self.train_accus_pw) / len(self.train_accus_pw))
-            #print("----avarage f1-Score of N:", sum(self.c1_f_pw) / len(self.c1_f_pw))
+            # print("----avarage f1-Score of N:", sum(self.c1_f_pw) / len(self.c1_f_pw))
             print("----avarage f1-Score of B:", sum(self.c2_f_pw) / len(self.c2_f_pw))
             print("PPH:")
             print("----avarage accuracy :", sum(self.train_accus_pph) / len(self.train_accus_pph))
-            #print("----avarage f1-Score of N:", sum(self.c1_f_pph) / len(self.c1_f_pph))
+            # print("----avarage f1-Score of N:", sum(self.c1_f_pph) / len(self.c1_f_pph))
             print("----avarage f1-Score of B:", sum(self.c2_f_pph) / len(self.c2_f_pph))
-            #print("IPH:")
-            #print("----avarage accuracy:", sum(self.train_accus_iph) / len(self.train_accus_iph))
-            #print("----avarage f1-Score of N:", sum(self.c1_f_iph) / len(self.c1_f_iph))
-            #print("----avarage f1-Score of B:", sum(self.c2_f_iph) / len(self.c2_f_iph))
-        elif type=="validation":
+            # print("IPH:")
+            # print("----avarage accuracy:", sum(self.train_accus_iph) / len(self.train_accus_iph))
+            # print("----avarage f1-Score of N:", sum(self.c1_f_iph) / len(self.c1_f_iph))
+            # print("----avarage f1-Score of B:", sum(self.c2_f_iph) / len(self.c2_f_iph))
+        elif type == "validation":
             print("                             /**Validation info**/")
             print("----avarage validation loss:", self.valid_loss)
             print("PW:")
             print("----avarage accuracy:", self.valid_accuracy_pw)
-            #print("----avarage f1-Score of N:", self.valid_f1_pw[0])
+            # print("----avarage f1-Score of N:", self.valid_f1_pw[0])
             print("----avarage f1-Score of B:", self.valid_f1_pw[1])
             print("PPH:")
             print("----avarage accuracy :", self.valid_accuracy_pph)
-            #print("----avarage f1-Score of N:", self.valid_f1_pph[0])
+            # print("----avarage f1-Score of N:", self.valid_f1_pph[0])
             print("----avarage f1-Score of B:", self.valid_f1_pph[1])
-            #print("IPH:")
-            #print("----avarage accuracy:", self.valid_accuracy_iph)
-            #print("----avarage f1-Score of N:", self.valid_f1_1_iph)
-            #print("----avarage f1-Score of B:", self.valid_f1_2_iph)
+            # print("IPH:")
+            # print("----avarage accuracy:", self.valid_accuracy_iph)
+            # print("----avarage f1-Score of N:", self.valid_f1_1_iph)
+            # print("----avarage f1-Score of B:", self.valid_f1_2_iph)
         else:
             print("                             /**testation info**/")
             print("----avarage test loss:", self.test_loss)
@@ -859,7 +798,6 @@ class Alignment():
             # print("----avarage f1-Score of B:", self.test_f1_2_iph)
 
 
-
 # train && test
 if __name__ == "__main__":
     # 读数据
@@ -875,8 +813,8 @@ if __name__ == "__main__":
     df_test_pph = pd.read_pickle(path="../data/dataset/pph_summary_test.pkl")
 
     # iph
-    #df_train_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_train.pkl")
-    #df_validation_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_validation.pkl")
+    # df_train_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_train.pkl")
+    # df_validation_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_validation.pkl")
 
     # 实际上,X里面的内容都是一样的,所以这里统一使用pw的X来作为所有的X
     # 但是标签是不一样的,所以需要每个都要具体定义
@@ -884,12 +822,12 @@ if __name__ == "__main__":
     X_valid = np.asarray(list(df_valid_pw['X'].values))
     X_test = np.asarray(list(df_test_pw['X'].values))
 
-    #print("X_train:\n",X_train)
-    #print("X_train.shape",X_train.shape)
-    #print("X_valid:\n",X_valid)
-    #print("X_valid.shape:",X_valid.shape)
-    #print("X_test:\n", X_test)
-    #print("X_test.shape", X_test.shape)
+    # print("X_train:\n",X_train)
+    # print("X_train.shape",X_train.shape)
+    # print("X_valid:\n",X_valid)
+    # print("X_valid.shape:",X_valid.shape)
+    # print("X_test:\n", X_test)
+    # print("X_test.shape", X_test.shape)
 
     # tags
     y_train_pw = np.asarray(list(df_train_pw['y'].values))
@@ -907,60 +845,58 @@ if __name__ == "__main__":
     len_train = np.asarray(list(df_train_pw['sentence_len'].values))
     len_valid = np.asarray(list(df_valid_pw['sentence_len'].values))
     len_test = np.asarray(list(df_test_pw['sentence_len'].values))
-    #print("len_train:", len_train.shape)
-    #print("len_valid:", len_valid.shape)
-    #print("len_test:", len_test.shape)
+    # print("len_train:", len_train.shape)
+    # print("len_valid:", len_valid.shape)
+    # print("len_test:", len_test.shape)
 
     # ----------------------------------------Extra Info--------------------------------
     # pos
     pos_train = util.readExtraInfo(file="../data/dataset/pos_train_tag.txt")
     pos_valid = util.readExtraInfo(file="../data/dataset/pos_valid_tag.txt")
     pos_test = util.readExtraInfo(file="../data/dataset/pos_test_tag.txt")
-    #print("pos_train.shape",pos_train.shape)
-    #print("pos_valid.shape",pos_valid.shape)
-    #print("pos_test.shape", pos_test.shape)
+    # print("pos_train.shape",pos_train.shape)
+    # print("pos_valid.shape",pos_valid.shape)
+    # print("pos_test.shape", pos_test.shape)
 
     # length
     length_train = util.readExtraInfo(file="../data/dataset/length_train_tag.txt")
     length_valid = util.readExtraInfo(file="../data/dataset/length_valid_tag.txt")
     length_test = util.readExtraInfo(file="../data/dataset/length_test_tag.txt")
-    #print("shape of length_train:",length_train.shape)
-    #print("shape of length_valid:",length_valid.shape)
-    #print("shape of length_test:", length_test.shape)
+    # print("shape of length_train:",length_train.shape)
+    # print("shape of length_valid:",length_valid.shape)
+    # print("shape of length_test:", length_test.shape)
 
     # position
     position_train = util.readExtraInfo(file="../data/dataset/position_train_tag.txt")
     position_valid = util.readExtraInfo(file="../data/dataset/position_valid_tag.txt")
     position_test = util.readExtraInfo(file="../data/dataset/position_test_tag.txt")
-    #print("shape of position_train:",position_train.shape)
-    #print("shape of positon_valid:",position_valid.shape)
-    #print("shape of positon_test:", position_test.shape)
+    # print("shape of position_train:",position_train.shape)
+    # print("shape of positon_valid:",position_valid.shape)
+    # print("shape of positon_test:", position_test.shape)
 
     # accum
     accum_train = util.readExtraInfo(file="../data/dataset/accum_train_tag.txt")
     accum_valid = util.readExtraInfo(file="../data/dataset/accum_valid_tag.txt")
     accum_test = util.readExtraInfo(file="../data/dataset/accum_test_tag.txt")
-    #print("shape of accum_train:", accum_train.shape)
-    #print("shape of accum_valid:", accum_valid.shape)
-    #print("shape of accum_test:", accum_test.shape)
+    # print("shape of accum_train:", accum_train.shape)
+    # print("shape of accum_valid:", accum_valid.shape)
+    # print("shape of accum_test:", accum_test.shape)
 
     # accum reverse
     accumR_train = util.readExtraInfo(file="../data/dataset/accum_reverse_train_tag.txt")
     accumR_valid = util.readExtraInfo(file="../data/dataset/accum_reverse_valid_tag.txt")
     accumR_test = util.readExtraInfo(file="../data/dataset/accum_reverse_test_tag.txt")
-    #print("shape of accumR_train:", accumR_train.shape)
-    #print("shape of accumR_valid:", accumR_valid.shape)
-    #print("shape of accumR_test:", accumR_test.shape)
-
+    # print("shape of accumR_train:", accumR_train.shape)
+    # print("shape of accumR_valid:", accumR_valid.shape)
+    # print("shape of accumR_test:", accumR_test.shape)
 
     y_train = [y_train_pw, y_train_pph]
     y_valid = [y_valid_pw, y_valid_pph]
     y_test = [y_test_pw, y_test_pph]
 
-    #print("Run Model...\n\n\n")
+    # print("Run Model...\n\n\n")
     model = Alignment()
     model.fit(
         X_train, y_train, len_train, pos_train, length_train, position_train,
         X_valid, y_valid, len_valid, pos_valid, length_valid, position_valid,
-        X_test, y_test, len_test, pos_test, length_test, position_test,"test", False)
-
+        X_test, y_test, len_test, pos_test, length_test, position_test, "test", False)
