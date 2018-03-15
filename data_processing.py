@@ -9,7 +9,7 @@ import time
 import pandas as pd
 import numpy as np
 from itertools import chain
-from gensim.models import word2vec
+#from gensim.models import word2vec
 from parameter import MAX_SENTENCE_SIZE
 from parameter import WORD_EMBEDDING_SIZE
 from parameter import CHAR_EMBEDDING_SIZE
@@ -341,12 +341,12 @@ def make_dataset(inFile,outFile):
 #summary_train.pkl
 if __name__=="__main__":
     start_time = time.time()
-    #print("[1]-->trans corpus to char corpus and char embeddings...")
-    #toCharCorpus(inFile="./data/corpus/prosody.txt",outFile="./data/corpus/prosody_char.txt")
+    print("[1]-->trans corpus to char corpus and char embeddings...")
+    toCharCorpus(inFile="./data/corpus/prosody.txt",outFile="./data/corpus/prosody_char.txt")
     #toCharEmbeddings(inFile="./data/corpus/prosody_char.txt")
 
-    #print("[2]-->trans corpus to word corpus and word embeddings...")
-    #toWordCorpus(inFile="./data/corpus/prosody.txt", outFile="./data/corpus/prosody_word.txt")
+    print("[2]-->trans corpus to word corpus and word embeddings...")
+    toWordCorpus(inFile="./data/corpus/prosody.txt", outFile="./data/corpus/prosody_word.txt")
     #toWordEmbeddings(inFile="./data/corpus/prosody_word.txt")
 
     print("[3]-->trans corpus to PW format......")

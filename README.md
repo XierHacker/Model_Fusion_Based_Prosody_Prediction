@@ -15,7 +15,7 @@
 ## steps
 ### **----------------------data processing-----------------------**
 #### 1.run `python convert.py`
->trans .utf-8 raw files to prosody tagged files
+>convert `.utf-8` raw files to prosody tagged files
 
 #### 2.run `python data_processing.py`
 >trans prosody tagged files to dataset

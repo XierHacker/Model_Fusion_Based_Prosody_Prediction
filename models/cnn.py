@@ -14,6 +14,10 @@ import os
 import parameter
 import util
 
+#指定显卡
+os.environ['CUDA_VISIBLE_DEVICES']='3'
+config=tf.ConfigProto()
+config.gpu_options.allow_growth=True
 
 class CNN():
     def __init__(self):
@@ -149,6 +153,8 @@ class CNN():
             #return tf.reshape(pred, [-1, self.num_steps, self.num_tags])
             return pred
 
+    def hierarchy(self,inputs,y_masked,scope_name,reuse=False):
+        pass
 
     # forward process and training process
     def fit(self, X_train, y_train, len_train, pos_train,length_train,position_train,
@@ -459,8 +465,8 @@ class CNN():
 
             self.best_validation_loss = 1000  # best validation accuracy in training process
             # store result
-            if not os.path.exists("../result/alignment/"):
-                os.mkdir("../result/alignment/")
+            if not os.path.exists("../result/cnn/"):
+                os.mkdir("../result/cnn/")
 
             # epoch
             for epoch in range(1, self.max_epoch + 1):
@@ -469,8 +475,6 @@ class CNN():
                 # training loss/accuracy in every mini-batch
                 self.train_losses = []
                 self.train_accus_pw = []
-                s_accus_pw = ""
-                s_loss = ""
                 self.train_accus_pph = []
                 # self.train_accus_iph = []
 
@@ -509,20 +513,18 @@ class CNN():
                     util.writeProb(
                         prob_pw=train_prob_pw_masked,
                         prob_pph=train_prob_pph_masked,
-                        outFile="../result/alignment/alignment_prob_train_epoch" + str(epoch) + ".txt"
+                        outFile="../result/cnn/cnn_prob_train_epoch" + str(epoch) + ".txt"
                     )
 
                     lrs.append(lr)
                     # loss
                     self.train_losses.append(train_loss)
-                    s_loss += (str(train_loss) + "\n")
                     # metrics
                     accuracy_pw, f1_pw = util.eval(y_true=y_train_pw_masked, y_pred=train_pred_pw)  # pw
                     accuracy_pph, f1_pph = util.eval(y_true=y_train_pph_masked, y_pred=train_pred_pph)  # pph
                     # accuracy_iph, f1_1_iph, f1_2_iph = util.eval(y_true=y_train_iph_masked,y_pred=train_pred_iph)   # iph
 
                     self.train_accus_pw.append(accuracy_pw)
-                    s_accus_pw += (str(accuracy_pw) + "\n")
                     self.train_accus_pph.append(accuracy_pph)
                     # self.train_accus_iph.append(accuracy_iph)
                     # F1-score
@@ -558,7 +560,7 @@ class CNN():
                 util.writeProb(
                     prob_pw=valid_prob_pw_masked,
                     prob_pph=valid_prob_pph_masked,
-                    outFile="../result/alignment/alignment_prob_valid_epoch" + str(epoch) + ".txt"
+                    outFile="../result/cnn/cnn_prob_valid_epoch" + str(epoch) + ".txt"
                 )
 
                 # metrics
@@ -576,7 +578,7 @@ class CNN():
                     X=X_valid,
                     preds_pw=valid_pred_pw,
                     preds_pph=valid_pred_pph,
-                    filename="../result/alignment/valid_recover_epoch_" + str(epoch) + ".txt"
+                    filename="../result/cnn/valid_recover_epoch_" + str(epoch) + ".txt"
                 )
                 # ----------------------------------------------------------------------------------------
 
@@ -605,7 +607,7 @@ class CNN():
                 util.writeProb(
                     prob_pw=test_prob_pw_masked,
                     prob_pph=test_prob_pph_masked,
-                    outFile="../result/alignment/alignment_prob_test_epoch" + str(epoch) + ".txt"
+                    outFile="../result/cnn/cnn_prob_test_epoch" + str(epoch) + ".txt"
                 )
 
                 # metrics
@@ -623,7 +625,7 @@ class CNN():
                     X=X_test,
                     preds_pw=test_pred_pw,
                     preds_pph=test_pred_pph,
-                    filename="../result/alignment/test_recover_epoch_" + str(epoch) + ".txt"
+                    filename="../result/cnn/test_recover_epoch_" + str(epoch) + ".txt"
                 )
                 # -----------------------------------------------------------------------------------
 
@@ -635,13 +637,6 @@ class CNN():
                 self.showInfo(type="training")
                 self.showInfo(type="valid")
                 self.showInfo(type="test")
-
-                f = open(file="../result/alignment/train_accuracy_epoch" + str(epoch) + ".txt", mode="w")
-                f.write(s_accus_pw)
-                f.close()
-                f = open(file="../result/alignment/train_loss_epoch" + str(epoch) + ".txt", mode="w")
-                f.write(s_loss)
-                f.close()
 
                 # when we get a new best validation accuracy,we store the model
                 if self.best_validation_loss < self.valid_loss:

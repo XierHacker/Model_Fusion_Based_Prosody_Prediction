@@ -9,7 +9,110 @@ from sklearn.metrics import f1_score
 from sklearn.preprocessing import OneHotEncoder
 
 #load data
-#def loadData():
+def loadData():
+    # pw
+    df_train_pw = pd.read_pickle(path="../data/dataset/pw_summary_train.pkl")
+    df_valid_pw = pd.read_pickle(path="../data/dataset/pw_summary_valid.pkl")
+    df_test_pw = pd.read_pickle(path="../data/dataset/pw_summary_test.pkl")
+
+    # pph
+    df_train_pph = pd.read_pickle(path="../data/dataset/pph_summary_train.pkl")
+    df_valid_pph = pd.read_pickle(path="../data/dataset/pph_summary_valid.pkl")
+    df_test_pph = pd.read_pickle(path="../data/dataset/pph_summary_test.pkl")
+
+    # iph
+    # df_train_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_train.pkl")
+    # df_validation_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_validation.pkl")
+
+    # 实际上,X里面的内容都是一样的,所以这里统一使用pw的X来作为所有的X
+    # 但是标签是不一样的,所以需要每个都要具体定义
+    X_train = np.asarray(list(df_train_pw['X'].values))
+    X_valid = np.asarray(list(df_valid_pw['X'].values))
+    X_test = np.asarray(list(df_test_pw['X'].values))
+
+    # print("X_train:\n",X_train)
+    # print("X_train.shape",X_train.shape)
+    # print("X_valid:\n",X_valid)
+    # print("X_valid.shape:",X_valid.shape)
+    # print("X_test:\n", X_test)
+    # print("X_test.shape", X_test.shape)
+
+    # tags
+    y_train_pw = np.asarray(list(df_train_pw['y'].values))
+    y_valid_pw = np.asarray(list(df_valid_pw['y'].values))
+    y_test_pw = np.asarray(list(df_test_pw['y'].values))
+
+    y_train_pph = np.asarray(list(df_train_pph['y'].values))
+    y_valid_pph = np.asarray(list(df_valid_pph['y'].values))
+    y_test_pph = np.asarray(list(df_test_pph['y'].values))
+
+    # y_train_iph = np.asarray(list(df_train_iph['y'].values))
+    # y_validation_iph = np.asarray(list(df_validation_iph['y'].values))
+
+    # length每一行序列的长度,因为都一样,所以统一使用pw的
+    len_train = np.asarray(list(df_train_pw['sentence_len'].values))
+    len_valid = np.asarray(list(df_valid_pw['sentence_len'].values))
+    len_test = np.asarray(list(df_test_pw['sentence_len'].values))
+    # print("len_train:", len_train.shape)
+    # print("len_valid:", len_valid.shape)
+    # print("len_test:", len_test.shape)
+
+    # ----------------------------------------Extra Info--------------------------------
+    # pos
+    pos_train = readExtraInfo(file="../data/dataset/pos_train_tag.txt")
+    pos_valid = readExtraInfo(file="../data/dataset/pos_valid_tag.txt")
+    pos_test = readExtraInfo(file="../data/dataset/pos_test_tag.txt")
+    # print("pos_train.shape",pos_train.shape)
+    # print("pos_valid.shape",pos_valid.shape)
+    # print("pos_test.shape", pos_test.shape)
+
+    # length
+    length_train = readExtraInfo(file="../data/dataset/length_train_tag.txt")
+    length_valid = readExtraInfo(file="../data/dataset/length_valid_tag.txt")
+    length_test = readExtraInfo(file="../data/dataset/length_test_tag.txt")
+    # print("shape of length_train:",length_train.shape)
+    # print("shape of length_valid:",length_valid.shape)
+    # print("shape of length_test:", length_test.shape)
+
+    # position
+    position_train = readExtraInfo(file="../data/dataset/position_train_tag.txt")
+    position_valid = readExtraInfo(file="../data/dataset/position_valid_tag.txt")
+    position_test = readExtraInfo(file="../data/dataset/position_test_tag.txt")
+    # print("shape of position_train:",position_train.shape)
+    # print("shape of positon_valid:",position_valid.shape)
+    # print("shape of positon_test:", position_test.shape)
+
+    # accum
+    accum_train = readExtraInfo(file="../data/dataset/accum_train_tag.txt")
+    accum_valid = readExtraInfo(file="../data/dataset/accum_valid_tag.txt")
+    accum_test = readExtraInfo(file="../data/dataset/accum_test_tag.txt")
+    # print("shape of accum_train:", accum_train.shape)
+    # print("shape of accum_valid:", accum_valid.shape)
+    # print("shape of accum_test:", accum_test.shape)
+
+    # accum reverse
+    accumR_train = readExtraInfo(file="../data/dataset/accum_reverse_train_tag.txt")
+    accumR_valid = readExtraInfo(file="../data/dataset/accum_reverse_valid_tag.txt")
+    accumR_test = readExtraInfo(file="../data/dataset/accum_reverse_test_tag.txt")
+    # print("shape of accumR_train:", accumR_train.shape)
+    # print("shape of accumR_valid:", accumR_valid.shape)
+    # print("shape of accumR_test:", accumR_test.shape)
+
+    y_train = [y_train_pw, y_train_pph]
+    y_valid = [y_valid_pw, y_valid_pph]
+    y_test = [y_test_pw, y_test_pph]
+
+    return X_train, y_train, len_train, pos_train, length_train, position_train,\
+           X_valid, y_valid, len_valid, pos_valid, length_valid, position_valid,\
+           X_test, y_test, len_test, pos_test, length_test, position_test
+
+    # print("Run Model...\n\n\n")
+    model = Alignment()
+    model.fit(
+        X_train, y_train, len_train, pos_train, length_train, position_train,
+        X_valid, y_valid, len_valid, pos_valid, length_valid, position_valid,
+        X_test, y_test, len_test, pos_test, length_test, position_test, "test", False)
+
 
 #compute accuracy,precison,recall and f1
 def eval(y_true,y_pred):
@@ -49,7 +152,6 @@ def getTag2(preds_pw,preds_pph):
                 arg[i] = 0
     arg = (arg / 2).astype(dtype=np.int32)
     return arg
-
 
 #recover to .txt format
 def recover2(X,preds_pw,preds_pph,filename):
@@ -212,17 +314,18 @@ if __name__ =="__main__":
     #readEmbeddings(file="./data/embeddings/word_vec.txt")
     #readEmbeddings(file="./data/embeddings/char_vec.txt")
     #getCWE(word_embed_file="./data/embeddings/word_vec.txt",char_embed_file="./data/embeddings/char_vec.txt")
+
     print("CRF")
-    prob,labels,preds=extractProb(file="./result/crf/crf_prob_valid.txt")
-    #print("prob.shape",prob.shape)
-    #print("labels.shape", labels.shape)
-    #print("preds.shape",preds.shape)
+    prob, labels, preds = extractProb(file="./result/crf/crf_prob_test.txt")
+    print("prob.shape", prob.shape)
+    print("labels.shape", labels.shape)
+    print("preds.shape", preds.shape)
     p1, f1 = eval(y_true=labels, y_pred=preds)
     print("accuracy:", p1)
     print("f1-score:", f1)
 
     print("Alignment")
-    prob_align=extractProb2(file="./result/alignment/alignment_prob_valid.txt")
+    prob_align=extractProb2(file="./result/alignment/alignment_prob_test_epoch4.txt")
     #print("prob_align.shape",prob_align.shape)
     #print("prob_align:",prob_align)
     preds_align=np.argmax(prob_align,axis=-1,)
@@ -232,6 +335,9 @@ if __name__ =="__main__":
     print("accuracy:",p2)
     print("f1-score:",f2)
 
+    '''
+    
+    
     print("CNN")
     prob_align = extractProb2(file="./result/cnn/cnn_prob_valid.txt")
     # print("prob_align.shape",prob_align.shape)
@@ -242,6 +348,9 @@ if __name__ =="__main__":
     p3, f3 = eval(y_true=labels, y_pred=preds_cnn)
     print("accuracy:", p3)
     print("f1-score:", f3)
+    
+    '''
+
 
 
 

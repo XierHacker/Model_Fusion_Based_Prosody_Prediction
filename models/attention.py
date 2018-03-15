@@ -1,5 +1,5 @@
 '''
-    model with CWS and pos information
+    model with attention
 '''
 import sys
 sys.path.append("..")
@@ -19,7 +19,7 @@ config=tf.ConfigProto()
 config.gpu_options.allow_growth=True
 
 
-class Alignment():
+class Attention():
     def __init__(self):
         # basic environment
         self.graph = tf.Graph()
@@ -36,6 +36,9 @@ class Alignment():
         self.hidden_units_num2 = parameter.HIDDEN_UNITS_NUM2
         self.layer_num = parameter.LAYER_NUM
         self.max_sentence_size = parameter.MAX_SENTENCE_SIZE
+
+        #attention related
+        self.attention_dim=100
 
         # self.vocab_size = parameter.VOCAB_SIZE
         self.word_vocab_size = parameter.WORD_VOCAB_SIZE
@@ -65,31 +68,75 @@ class Alignment():
         )
         outputs_forward = outputs[0]  # shape of h is [batch_size, max_time, cell_fw.output_size]
         outputs_backward = outputs[1]  # shape of h is [batch_size, max_time, cell_bw.output_size]
-        states_forward = states[0]  # .c:[batch_size,num_units]   .h:[batch_size,num_units]
-        states_backward = states[1]
         # concat final outputs [batch_size, max_time, cell_fw.output_size*2]
         encoder_outputs = tf.concat(values=[outputs_forward, outputs_backward], axis=2)
+
+        states_forward = states[0]  # .c:[batch_size,num_units]   .h:[batch_size,num_units]
+        states_backward = states[1]
         # concat final states
         state_h_concat = tf.concat(values=[states_forward.h, states_backward.h], axis=1, name="state_h_concat")
-        # print("state_h_concat:",state_h_concat)
-        state_c_concat = tf.concat(values=[states_forward.c, states_backward.c], axis=1, name="state_c_concat")
-        # print("state_c_concat:",state_c_concat)
-        encoder_states = rnn.LSTMStateTuple(c=state_c_concat, h=state_h_concat)
 
+        #print("state_h_concat:",state_h_concat)
+        state_c_concat = tf.concat(values=[states_forward.c, states_backward.c], axis=1, name="state_c_concat")
+        #print("state_c_concat:",state_c_concat)
+        encoder_states = rnn.LSTMStateTuple(c=state_c_concat, h=state_h_concat)
+        #print("encoder_states[0]:",encoder_states[0])
+        #print("encoder_states[1]:", encoder_states[1])
+        #print("concat:",tf.concat(values=[encoder_states[0],encoder_states[1]],axis=1))
         return encoder_outputs, encoder_states
 
+    def attention(self,encoder_outputs,pre_state,W,U,V):
+        #e_j_(k)=Vtanh(Wh_(k)+Us_j-1)
+        #encoder_outputs:h
+        #pre_state:s_j-1
+        #return:C
+
+        #把state扩展为hidden_num*4的向量s
+        s=tf.concat(values=(pre_state[0],pre_state[1]),axis=1)
+        #
+        e_j=[]
+        for k in range(self.max_sentence_size):
+            h_k=encoder_outputs[:,k,:]                                  #[batch_size,hidden_num*2]
+            temp=tf.tanh(tf.add(x=tf.matmul(h_k,W),y=tf.matmul(s,U)))   #[batch_size,self.attention_dim]
+            e_j_k=tf.matmul(temp,V)                                     #[batch_size,1]
+            e_j.append(e_j_k)                                           #e_j contains max_sentence elements with shape [batch_size,1]
+        e_j=tf.concat(values=e_j,axis=1)                                #[batch_size,max_sentence_size]
+
+        #softmax,每一行为一个样本,每一列为相应时刻的h将要乘上的比例
+        a_j=tf.nn.softmax(logits=e_j,axis=1)                            #[batch_size,max_sentence_size]
+        a_j=tf.reshape(tensor=a_j,shape=(-1,1,self.max_sentence_size))  #[batch_size,1,max_sentence_size]
+        #注意这里的三维矩阵乘法和背后的思想
+        C=tf.matmul(a_j,encoder_outputs)                                #[batch_size,1,hidden_num*2]
+        C=tf.reshape(tensor=C,shape=(-1,self.hidden_units_num*2))       #[batch_size,hidden_num*2]
+        return C
+
+
     # decoder
-    def decoder(self, cell, initial_state, inputs, scope_name):
-        # outputs:[batch_size,time_steps,hidden_size*2]
-        outputs, states = tf.nn.dynamic_rnn(
-            cell=cell,
-            inputs=inputs,
-            initial_state=initial_state,
-            scope=scope_name
-        )
-        # [batch_size*time_steps,hidden_size*2]
-        decoder_outputs = tf.reshape(tensor=outputs, shape=(-1, self.hidden_units_num * 2))
-        return decoder_outputs
+    def decoder(self, cell, initial_state,encoder_outputs,W,U,V,scope_name):
+        #outputs,用来接收每一步的结果
+        outputs=[]
+        state=initial_state
+        with tf.variable_scope(scope_name):
+            for j in range(self.max_sentence_size):
+                if j>0:
+                    tf.get_variable_scope().reuse_variables()
+                #输入就是encoder的对应时间点的输出
+                input=encoder_outputs[:,j,:]        #[batch_size,hidden_num*2]
+                #调用attention 得到上下文C
+                C=self.attention(encoder_outputs=encoder_outputs,pre_state=state,W=W,U=U,V=V)
+                #上下文和输入拼接
+                input=tf.concat(values=[input,C],axis=1)
+                (output,state)=cell(input,state)
+                outputs.append(output)
+
+            #这个时候的outputs是一个列表,列表中有max_sentence_size个元素,其中每个元素的形状为[batch_size,hidden_num*2]
+            outputs=tf.concat(values=outputs,axis=0)
+            outputs=tf.reshape(tensor=outputs,shape=(self.max_sentence_size,-1,self.hidden_units_num*2))
+            outputs=tf.transpose(a=outputs,perm=(1,0,2))            #[batch_size,time_steps,hidden_num*2]
+            # [batch_size*time_steps,hidden_size*2]
+            decoder_outputs = tf.reshape(tensor=outputs, shape=(-1, self.hidden_units_num * 2))
+            return decoder_outputs
+
 
     #full inference process of each hierachy
     def hierarchy(self,inputs,y_masked,scope_name,reuse=False):
@@ -104,6 +151,29 @@ class Alignment():
             decoder_scope_name = "de_lstm_iph"
 
         with tf.variable_scope(name_or_scope=scope_name,reuse=reuse):
+            #attention Variables
+            W_attention=tf.get_variable(
+                name="W_attention",
+                shape=(self.hidden_units_num*2,self.attention_dim),
+                dtype=tf.float32,
+                initializer=tf.initializers.truncated_normal()
+            )
+            U_attention=tf.get_variable(
+                name="U_attention",
+                shape=(self.hidden_units_num*4,self.attention_dim),
+                dtype=tf.float32,
+                initializer=tf.initializers.truncated_normal()
+            )
+            V_attention=tf.get_variable(
+                name="V_attention",
+                shape=(self.attention_dim, 1),
+                dtype=tf.float32,
+                initializer=tf.initializers.truncated_normal()
+            )
+            #print("W_attention:",W_attention)
+            #print("U_attention:", U_attention)
+            #print("V_attention:", V_attention)
+
             # Encoder cells,forward part
             en_lstm_forward1 = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
             # en_lstm_forward2=rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
@@ -124,7 +194,7 @@ class Alignment():
                 output_keep_prob=self.output_keep_prob_p
             )
 
-            # decoder cells
+            # decoder cells,units_num设置为2是因为encoder最后的状态的维度变成了两倍
             de_lstm = rnn.BasicLSTMCell(num_units=self.hidden_units_num * 2)
             de_lstm_ = rnn.DropoutWrapper(
                 cell=de_lstm,
@@ -141,13 +211,15 @@ class Alignment():
                 scope_name=encoder_scope_name
             )
             # decode,shape of h is [batch*time_steps,hidden_units*2]
-            h = self.decoder(
+            h=self.decoder(
                 cell=de_lstm,
                 initial_state=encoder_states,
-                inputs=encoder_outputs,
+                encoder_outputs=encoder_outputs,
+                W=W_attention,
+                U=U_attention,
+                V=V_attention,
                 scope_name=decoder_scope_name
             )
-
             # 全连接dropout
             h = tf.nn.dropout(x=h, keep_prob=self.keep_prob_p)
 
@@ -182,7 +254,7 @@ class Alignment():
             #print("logits_masked.shape", logits_masked.shape)
 
             # softmax
-            prob_masked = tf.nn.softmax(logits=logits_masked, axis=-1, name="prob_pw_masked")
+            prob_masked = tf.nn.softmax(logits=logits_masked, axis=-1, name="prob_masked")
             #print("prob_masked.shape", prob_masked.shape)
 
             # prediction
@@ -206,13 +278,11 @@ class Alignment():
                 mask=self.mask,
                 name="pred_masked"
             )
-
             # loss
             loss = tf.losses.sparse_softmax_cross_entropy(
                 labels=y_masked,
                 logits=logits_masked
             ) + tf.contrib.layers.l2_regularizer(self.lambda_pw)(weight)
-
             return loss,prob_masked,pred,pred_masked,pred_normal_one_hot
 
 
@@ -331,6 +401,8 @@ class Alignment():
                 scope_name="pph"
             )
 
+            #------------------------------------------------------------------------------------------------
+
             # adjust learning rate
             global_step = tf.Variable(initial_value=1, trainable=False)
             start_learning_rate = self.learning_rate
@@ -361,10 +433,11 @@ class Alignment():
             validation_Size = X_valid.shape[0]
             test_Size = X_test.shape[0]
 
-            self.best_validation_loss = 1000  # best validation accuracy in training process
+            # best validation accuracy in training process
+            self.best_validation_loss = 1000
             # store result
-            if not os.path.exists("../result/alignment/"):
-                os.mkdir("../result/alignment/")
+            if not os.path.exists("../result/attention/"):
+                os.mkdir("../result/attention/")
 
             # epoch
             for epoch in range(1, self.max_epoch + 1):
@@ -376,8 +449,9 @@ class Alignment():
                 self.train_accus_pph = []
                 # self.train_accus_iph = []
 
+                # each class's f1 score
                 self.c1_f_pw = [];
-                self.c2_f_pw = []  # each class's f1 score
+                self.c2_f_pw = []
                 self.c1_f_pph = [];
                 self.c2_f_pph = []
                 # self.c1_f_iph = [];
@@ -408,39 +482,38 @@ class Alignment():
                     )
 
                     # write the prob to files
-                    #util.writeProb(
-                    #    prob_pw=train_prob_pw_masked,
-                    #    prob_pph=train_prob_pph_masked,
-                    #    outFile="../result/alignment/alignment_prob_train_epoch" + str(epoch) + ".txt"
-                    #)
+                    util.writeProb(
+                        prob_pw=train_prob_pw_masked,
+                        prob_pph=train_prob_pph_masked,
+                        outFile="../result/attention/attention_prob_train_epoch" + str(epoch) + ".txt"
+                    )
 
                     lrs.append(lr)
                     # loss
                     self.train_losses.append(train_loss)
+
                     # metrics
                     accuracy_pw, f1_pw = util.eval(y_true=y_train_pw_masked, y_pred=train_pred_pw)  # pw
                     accuracy_pph, f1_pph = util.eval(y_true=y_train_pph_masked, y_pred=train_pred_pph)  # pph
-                    # accuracy_iph, f1_1_iph, f1_2_iph = util.eval(y_true=y_train_iph_masked,y_pred=train_pred_iph)   # iph
 
                     self.train_accus_pw.append(accuracy_pw)
                     self.train_accus_pph.append(accuracy_pph)
                     # self.train_accus_iph.append(accuracy_iph)
+
                     # F1-score
                     self.c1_f_pw.append(f1_pw[0]);
                     self.c2_f_pw.append(f1_pw[1])
                     self.c1_f_pph.append(f1_pph[0]);
                     self.c2_f_pph.append(f1_pph[1])
-                    # self.c1_f_iph.append(f1_1_iph);
-                    # self.c2_f_iph.append(f1_2_iph)
+                    #print("f1:",f1_pw[1],"  ",f1_pph[1])
 
                 # ----------------------------------validation in every epoch----------------------------------
                 self.valid_loss, y_valid_pw_masked, y_valid_pph_masked, \
                 valid_pred_pw_masked, valid_pred_pph_masked, valid_pred_pw, valid_pred_pph, \
                 valid_prob_pw_masked, valid_prob_pph_masked = sess.run(
-                    fetches=[self.loss, y_p_pw_masked, y_p_pph_masked,
-                             pred_pw_masked, pred_pph_masked, pred_pw, pred_pph,
-                             prob_pw_masked, prob_pph_masked
-                             ],
+                    fetches=[ self.loss, y_p_pw_masked, y_p_pph_masked,
+                              pred_pw_masked, pred_pph_masked, pred_pw, pred_pph,
+                              prob_pw_masked, prob_pph_masked ],
                     feed_dict={
                         self.X_p: X_valid,
                         self.y_p_pw: y_valid_pw,
@@ -455,11 +528,11 @@ class Alignment():
                     }
                 )
                 # write the prob to files
-                #util.writeProb(
-                #    prob_pw=valid_prob_pw_masked,
-                #    prob_pph=valid_prob_pph_masked,
-                #    outFile="../result/alignment/alignment_prob_valid_epoch" + str(epoch) + ".txt"
-                #)
+                util.writeProb(
+                    prob_pw=valid_prob_pw_masked,
+                    prob_pph=valid_prob_pph_masked,
+                    outFile="../result/attention/attention_prob_valid_epoch" + str(epoch) + ".txt"
+                )
 
                 # metrics
                 self.valid_accuracy_pw, self.valid_f1_pw = util.eval(
@@ -472,12 +545,12 @@ class Alignment():
                 )
                 # recover to original corpus txt
                 # shape of valid_pred_pw,valid_pred_pw,valid_pred_pw:[corpus_size*time_stpes]
-                #util.recover2(
-                #    X=X_valid,
-                #    preds_pw=valid_pred_pw,
-                #    preds_pph=valid_pred_pph,
-                #    filename="../result/alignment/valid_recover_epoch_" + str(epoch) + ".txt"
-                #)
+                util.recover2(
+                    X=X_valid,
+                    preds_pw=valid_pred_pw,
+                    preds_pph=valid_pred_pph,
+                    filename="../result/attention/valid_recover_epoch_" + str(epoch) + ".txt"
+                )
                 # ----------------------------------------------------------------------------------------
 
                 # ----------------------------------test in every epoch----------------------------------
@@ -485,9 +558,8 @@ class Alignment():
                 test_pred_pw_masked, test_pred_pph_masked, test_pred_pw, test_pred_pph, \
                 test_prob_pw_masked, test_prob_pph_masked = sess.run(
                     fetches=[self.loss, y_p_pw_masked, y_p_pph_masked,
-                             pred_pw_masked, pred_pph_masked, pred_pw, pred_pph,
-                             prob_pw_masked, prob_pph_masked
-                             ],
+                                pred_pw_masked, pred_pph_masked, pred_pw, pred_pph,
+                                prob_pw_masked, prob_pph_masked],
                     feed_dict={
                         self.X_p: X_test,
                         self.y_p_pw: y_test_pw,
@@ -502,11 +574,11 @@ class Alignment():
                     }
                 )
                 # write the prob to files
-                #util.writeProb(
-                #    prob_pw=test_prob_pw_masked,
-                #    prob_pph=test_prob_pph_masked,
-                #    outFile="../result/alignment/alignment_prob_test_epoch" + str(epoch) + ".txt"
-                #)
+                util.writeProb(
+                    prob_pw=test_prob_pw_masked,
+                    prob_pph=test_prob_pph_masked,
+                    outFile="../result/attention/attention_prob_test_epoch" + str(epoch) + ".txt"
+                )
 
                 # metrics
                 self.test_accuracy_pw, self.test_f1_pw = util.eval(
@@ -519,15 +591,13 @@ class Alignment():
                 )
                 # recover to original corpus txt
                 # shape of test_pred_pw,test_pred_pw,test_pred_pw:[corpus_size*time_stpes]
-                #util.recover2(
-                #    X=X_test,
-                #    preds_pw=test_pred_pw,
-                #    preds_pph=test_pred_pph,
-                #    filename="../result/alignment/test_recover_epoch_" + str(epoch) + ".txt"
-                #)
+                util.recover2(
+                    X=X_test,
+                    preds_pw=test_pred_pw,
+                    preds_pph=test_pred_pph,
+                    filename="../result/attention/test_recover_epoch_" + str(epoch) + ".txt"
+                )
                 # -----------------------------------------------------------------------------------
-
-                # self.valid_accuracy_iph, self.valid_f1_1_iph, self.valid_f1_2_iph = util.eval(y_true=y_valid_iph_masked,y_pred=valid_pred_iph)
 
                 # show information
                 print("Epoch ", epoch, " finished.", "spend ", round((time.time() - start_time) / 60, 2), " mins")
@@ -646,12 +716,100 @@ class Alignment():
 if __name__ == "__main__":
     # 读数据
     print("Loading Data...")
-    X_train, y_train, len_train, pos_train, length_train, position_train, \
-    X_valid, y_valid, len_valid, pos_valid, length_valid, position_valid, \
-    X_test, y_test, len_test, pos_test, length_test, position_test=util.loadData()
+    # pw
+    df_train_pw = pd.read_pickle(path="../data/dataset/pw_summary_train.pkl")
+    df_valid_pw = pd.read_pickle(path="../data/dataset/pw_summary_valid.pkl")
+    df_test_pw = pd.read_pickle(path="../data/dataset/pw_summary_test.pkl")
+
+    # pph
+    df_train_pph = pd.read_pickle(path="../data/dataset/pph_summary_train.pkl")
+    df_valid_pph = pd.read_pickle(path="../data/dataset/pph_summary_valid.pkl")
+    df_test_pph = pd.read_pickle(path="../data/dataset/pph_summary_test.pkl")
+
+    # iph
+    # df_train_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_train.pkl")
+    # df_validation_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_validation.pkl")
+
+    # 实际上,X里面的内容都是一样的,所以这里统一使用pw的X来作为所有的X
+    # 但是标签是不一样的,所以需要每个都要具体定义
+    X_train = np.asarray(list(df_train_pw['X'].values))
+    X_valid = np.asarray(list(df_valid_pw['X'].values))
+    X_test = np.asarray(list(df_test_pw['X'].values))
+
+    # print("X_train:\n",X_train)
+    # print("X_train.shape",X_train.shape)
+    # print("X_valid:\n",X_valid)
+    # print("X_valid.shape:",X_valid.shape)
+    # print("X_test:\n", X_test)
+    # print("X_test.shape", X_test.shape)
+
+    # tags
+    y_train_pw = np.asarray(list(df_train_pw['y'].values))
+    y_valid_pw = np.asarray(list(df_valid_pw['y'].values))
+    y_test_pw = np.asarray(list(df_test_pw['y'].values))
+
+    y_train_pph = np.asarray(list(df_train_pph['y'].values))
+    y_valid_pph = np.asarray(list(df_valid_pph['y'].values))
+    y_test_pph = np.asarray(list(df_test_pph['y'].values))
+
+    # y_train_iph = np.asarray(list(df_train_iph['y'].values))
+    # y_validation_iph = np.asarray(list(df_validation_iph['y'].values))
+
+    # length每一行序列的长度,因为都一样,所以统一使用pw的
+    len_train = np.asarray(list(df_train_pw['sentence_len'].values))
+    len_valid = np.asarray(list(df_valid_pw['sentence_len'].values))
+    len_test = np.asarray(list(df_test_pw['sentence_len'].values))
+    # print("len_train:", len_train.shape)
+    # print("len_valid:", len_valid.shape)
+    # print("len_test:", len_test.shape)
+
+    # ----------------------------------------Extra Info--------------------------------
+    # pos
+    pos_train = util.readExtraInfo(file="../data/dataset/pos_train_tag.txt")
+    pos_valid = util.readExtraInfo(file="../data/dataset/pos_valid_tag.txt")
+    pos_test = util.readExtraInfo(file="../data/dataset/pos_test_tag.txt")
+    # print("pos_train.shape",pos_train.shape)
+    # print("pos_valid.shape",pos_valid.shape)
+    # print("pos_test.shape", pos_test.shape)
+
+    # length
+    length_train = util.readExtraInfo(file="../data/dataset/length_train_tag.txt")
+    length_valid = util.readExtraInfo(file="../data/dataset/length_valid_tag.txt")
+    length_test = util.readExtraInfo(file="../data/dataset/length_test_tag.txt")
+    # print("shape of length_train:",length_train.shape)
+    # print("shape of length_valid:",length_valid.shape)
+    # print("shape of length_test:", length_test.shape)
+
+    # position
+    position_train = util.readExtraInfo(file="../data/dataset/position_train_tag.txt")
+    position_valid = util.readExtraInfo(file="../data/dataset/position_valid_tag.txt")
+    position_test = util.readExtraInfo(file="../data/dataset/position_test_tag.txt")
+    # print("shape of position_train:",position_train.shape)
+    # print("shape of positon_valid:",position_valid.shape)
+    # print("shape of positon_test:", position_test.shape)
+
+    # accum
+    accum_train = util.readExtraInfo(file="../data/dataset/accum_train_tag.txt")
+    accum_valid = util.readExtraInfo(file="../data/dataset/accum_valid_tag.txt")
+    accum_test = util.readExtraInfo(file="../data/dataset/accum_test_tag.txt")
+    # print("shape of accum_train:", accum_train.shape)
+    # print("shape of accum_valid:", accum_valid.shape)
+    # print("shape of accum_test:", accum_test.shape)
+
+    # accum reverse
+    accumR_train = util.readExtraInfo(file="../data/dataset/accum_reverse_train_tag.txt")
+    accumR_valid = util.readExtraInfo(file="../data/dataset/accum_reverse_valid_tag.txt")
+    accumR_test = util.readExtraInfo(file="../data/dataset/accum_reverse_test_tag.txt")
+    # print("shape of accumR_train:", accumR_train.shape)
+    # print("shape of accumR_valid:", accumR_valid.shape)
+    # print("shape of accumR_test:", accumR_test.shape)
+
+    y_train = [y_train_pw, y_train_pph]
+    y_valid = [y_valid_pw, y_valid_pph]
+    y_test = [y_test_pw, y_test_pph]
 
     # print("Run Model...\n\n\n")
-    model = Alignment()
+    model = Attention()
     model.fit(
         X_train, y_train, len_train, pos_train, length_train, position_train,
         X_valid, y_valid, len_valid, pos_valid, length_valid, position_valid,
