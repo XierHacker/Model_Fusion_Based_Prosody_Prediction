@@ -316,7 +316,7 @@ if __name__ =="__main__":
     #getCWE(word_embed_file="./data/embeddings/word_vec.txt",char_embed_file="./data/embeddings/char_vec.txt")
 
     print("CRF")
-    prob, labels, preds = extractProb(file="./result/crf/crf_prob_test.txt")
+    prob, labels, preds = extractProb(file="./result/crf/crf_prob_valid.txt")
     print("prob.shape", prob.shape)
     print("labels.shape", labels.shape)
     print("preds.shape", preds.shape)
@@ -325,8 +325,8 @@ if __name__ =="__main__":
     print("f1-score:", f1)
 
     print("Alignment")
-    prob_align=extractProb2(file="./result/alignment/alignment_prob_test_epoch4.txt")
-    #print("prob_align.shape",prob_align.shape)
+    prob_align=extractProb2(file="./result/alignment/alignment_prob_valid_epoch4.txt")
+    print("prob_align.shape",prob_align.shape)
     #print("prob_align:",prob_align)
     preds_align=np.argmax(prob_align,axis=-1,)
     #print(preds_align.shape)
@@ -335,21 +335,28 @@ if __name__ =="__main__":
     print("accuracy:",p2)
     print("f1-score:",f2)
 
-    '''
-    
-    
     print("CNN")
-    prob_align = extractProb2(file="./result/cnn/cnn_prob_valid.txt")
-    # print("prob_align.shape",prob_align.shape)
-    # print("prob_align:",prob_align)
-    preds_cnn = np.argmax(prob_align, axis=-1, )
-    # print(preds_align.shape)
-    # print(preds_align)
+    prob_cnn = extractProb2(file="./result/cnn/cnn_prob_valid_epoch5.txt")
+    print("prob_cnn.shape",prob_cnn.shape)
+    #print("prob_cnn:",prob_cnn)
+    preds_cnn = np.argmax(prob_cnn, axis=-1, )
+    #print(preds_cnn.shape)
+    #print(preds_align)
     p3, f3 = eval(y_true=labels, y_pred=preds_cnn)
     print("accuracy:", p3)
     print("f1-score:", f3)
-    
-    '''
+
+    print("Attention")
+    prob_atten = extractProb2(file="./result/attention/attention_prob_valid_epoch5.txt")
+    print("prob_atten.shape",prob_atten.shape)
+    #print("prob_atten:",prob_atten)
+    preds_atten = np.argmax(prob_atten, axis=-1, )
+    #print(preds_tten.shape)
+    #print(preds_tten)
+    p4, f4 = eval(y_true=labels, y_pred=preds_atten)
+    print("accuracy:", p4)
+    print("f1-score:", f4)
+
 
 
 

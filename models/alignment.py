@@ -14,7 +14,7 @@ import parameter
 import util
 
 #指定显卡
-os.environ['CUDA_VISIBLE_DEVICES']='3'
+os.environ['CUDA_VISIBLE_DEVICES']='2'
 config=tf.ConfigProto()
 config.gpu_options.allow_growth=True
 
@@ -293,6 +293,7 @@ class Alignment():
             # word embeddings
             self.word_embeddings = tf.Variable(
                 initial_value=util.readEmbeddings(file="../data/embeddings/word_vec.txt"),
+                trainable=False,
                 name="word_embeddings"
             )
             print("wordembedding.shape", self.word_embeddings.shape)

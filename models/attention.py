@@ -363,6 +363,7 @@ class Attention():
             # word embeddings
             self.word_embeddings = tf.Variable(
                 initial_value=util.readEmbeddings(file="../data/embeddings/word_vec.txt"),
+                trainable=False,
                 name="word_embeddings"
             )
             print("wordembedding.shape", self.word_embeddings.shape)
@@ -716,99 +717,12 @@ class Attention():
 if __name__ == "__main__":
     # 读数据
     print("Loading Data...")
-    # pw
-    df_train_pw = pd.read_pickle(path="../data/dataset/pw_summary_train.pkl")
-    df_valid_pw = pd.read_pickle(path="../data/dataset/pw_summary_valid.pkl")
-    df_test_pw = pd.read_pickle(path="../data/dataset/pw_summary_test.pkl")
+    X_train, y_train, len_train, pos_train, length_train, position_train, \
+    X_valid, y_valid, len_valid, pos_valid, length_valid, position_valid, \
+    X_test, y_test, len_test, pos_test, length_test, position_test = util.loadData()
 
-    # pph
-    df_train_pph = pd.read_pickle(path="../data/dataset/pph_summary_train.pkl")
-    df_valid_pph = pd.read_pickle(path="../data/dataset/pph_summary_valid.pkl")
-    df_test_pph = pd.read_pickle(path="../data/dataset/pph_summary_test.pkl")
-
-    # iph
-    # df_train_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_train.pkl")
-    # df_validation_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_validation.pkl")
-
-    # 实际上,X里面的内容都是一样的,所以这里统一使用pw的X来作为所有的X
-    # 但是标签是不一样的,所以需要每个都要具体定义
-    X_train = np.asarray(list(df_train_pw['X'].values))
-    X_valid = np.asarray(list(df_valid_pw['X'].values))
-    X_test = np.asarray(list(df_test_pw['X'].values))
-
-    # print("X_train:\n",X_train)
-    # print("X_train.shape",X_train.shape)
-    # print("X_valid:\n",X_valid)
-    # print("X_valid.shape:",X_valid.shape)
-    # print("X_test:\n", X_test)
-    # print("X_test.shape", X_test.shape)
-
-    # tags
-    y_train_pw = np.asarray(list(df_train_pw['y'].values))
-    y_valid_pw = np.asarray(list(df_valid_pw['y'].values))
-    y_test_pw = np.asarray(list(df_test_pw['y'].values))
-
-    y_train_pph = np.asarray(list(df_train_pph['y'].values))
-    y_valid_pph = np.asarray(list(df_valid_pph['y'].values))
-    y_test_pph = np.asarray(list(df_test_pph['y'].values))
-
-    # y_train_iph = np.asarray(list(df_train_iph['y'].values))
-    # y_validation_iph = np.asarray(list(df_validation_iph['y'].values))
-
-    # length每一行序列的长度,因为都一样,所以统一使用pw的
-    len_train = np.asarray(list(df_train_pw['sentence_len'].values))
-    len_valid = np.asarray(list(df_valid_pw['sentence_len'].values))
-    len_test = np.asarray(list(df_test_pw['sentence_len'].values))
-    # print("len_train:", len_train.shape)
-    # print("len_valid:", len_valid.shape)
-    # print("len_test:", len_test.shape)
-
-    # ----------------------------------------Extra Info--------------------------------
-    # pos
-    pos_train = util.readExtraInfo(file="../data/dataset/pos_train_tag.txt")
-    pos_valid = util.readExtraInfo(file="../data/dataset/pos_valid_tag.txt")
-    pos_test = util.readExtraInfo(file="../data/dataset/pos_test_tag.txt")
-    # print("pos_train.shape",pos_train.shape)
-    # print("pos_valid.shape",pos_valid.shape)
-    # print("pos_test.shape", pos_test.shape)
-
-    # length
-    length_train = util.readExtraInfo(file="../data/dataset/length_train_tag.txt")
-    length_valid = util.readExtraInfo(file="../data/dataset/length_valid_tag.txt")
-    length_test = util.readExtraInfo(file="../data/dataset/length_test_tag.txt")
-    # print("shape of length_train:",length_train.shape)
-    # print("shape of length_valid:",length_valid.shape)
-    # print("shape of length_test:", length_test.shape)
-
-    # position
-    position_train = util.readExtraInfo(file="../data/dataset/position_train_tag.txt")
-    position_valid = util.readExtraInfo(file="../data/dataset/position_valid_tag.txt")
-    position_test = util.readExtraInfo(file="../data/dataset/position_test_tag.txt")
-    # print("shape of position_train:",position_train.shape)
-    # print("shape of positon_valid:",position_valid.shape)
-    # print("shape of positon_test:", position_test.shape)
-
-    # accum
-    accum_train = util.readExtraInfo(file="../data/dataset/accum_train_tag.txt")
-    accum_valid = util.readExtraInfo(file="../data/dataset/accum_valid_tag.txt")
-    accum_test = util.readExtraInfo(file="../data/dataset/accum_test_tag.txt")
-    # print("shape of accum_train:", accum_train.shape)
-    # print("shape of accum_valid:", accum_valid.shape)
-    # print("shape of accum_test:", accum_test.shape)
-
-    # accum reverse
-    accumR_train = util.readExtraInfo(file="../data/dataset/accum_reverse_train_tag.txt")
-    accumR_valid = util.readExtraInfo(file="../data/dataset/accum_reverse_valid_tag.txt")
-    accumR_test = util.readExtraInfo(file="../data/dataset/accum_reverse_test_tag.txt")
-    # print("shape of accumR_train:", accumR_train.shape)
-    # print("shape of accumR_valid:", accumR_valid.shape)
-    # print("shape of accumR_test:", accumR_test.shape)
-
-    y_train = [y_train_pw, y_train_pph]
-    y_valid = [y_valid_pw, y_valid_pph]
-    y_test = [y_test_pw, y_test_pph]
-
-    # print("Run Model...\n\n\n")
+    #运行模型
+    print("Run Model...\n\n\n")
     model = Attention()
     model.fit(
         X_train, y_train, len_train, pos_train, length_train, position_train,
