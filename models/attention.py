@@ -237,7 +237,7 @@ class Attention():
                 initializer=tf.contrib.layers.xavier_initializer()
             )
             # logits:[batch_size*max_time, 2]
-            logits = tf.matmul(h, weight) + bias
+            logits =tf.matmul(h, weight) + bias
 
             # logits in an normal way:[batch_size,max_time_stpes,2]
             logits_normal = tf.reshape(

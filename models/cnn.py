@@ -148,8 +148,7 @@ class CNN():
 
                 b = tf.get_variable("b", initializer=tf.constant(0.001, shape=[self.class_num,]))
 
-                pred = tf.nn.xw_plus_b(idcnn_outputs, W, b)
-
+                pred = tf.nn.relu(features=tf.nn.xw_plus_b(idcnn_outputs, W, b))
             #return tf.reshape(pred, [-1, self.num_steps, self.num_tags])
             return pred
 

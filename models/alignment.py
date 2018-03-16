@@ -106,8 +106,8 @@ class Alignment():
         with tf.variable_scope(name_or_scope=scope_name,reuse=reuse):
             # Encoder cells,forward part
             en_lstm_forward1 = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
-            # en_lstm_forward2=rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
-            # en_lstm_forward=rnn.MultiRNNCell(cells=[en_lstm_forward1,en_lstm_forward2])
+            #attention(这个attention不是encoder和decoder的那个attention,别搞混)
+            #en_lstm_forward1=rnn.AttentionCellWrapper(cell=en_lstm_forward1,attn_length=5)
             # dropout
             en_lstm_forward1 = rnn.DropoutWrapper(
                 cell=en_lstm_forward1,
@@ -116,8 +116,8 @@ class Alignment():
             )
             # backward part
             en_lstm_backward1 = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
-            # en_lstm_backward2=rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
-            # en_lstm_backward=rnn.MultiRNNCell(cells=[en_lstm_backward1,en_lstm_backward2])
+            #attention
+            #en_lstm_backward1=rnn.AttentionCellWrapper(cell=en_lstm_backward1,attn_length=5)
             en_lstm_backward1 = rnn.DropoutWrapper(
                 cell=en_lstm_backward1,
                 input_keep_prob=self.input_keep_prob_p,
@@ -126,6 +126,9 @@ class Alignment():
 
             # decoder cells
             de_lstm = rnn.BasicLSTMCell(num_units=self.hidden_units_num * 2)
+            #attention
+            #de_lstm=rnn.AttentionCellWrapper(cell=de_lstm,attn_length=5)
+            #dropout
             de_lstm_ = rnn.DropoutWrapper(
                 cell=de_lstm,
                 input_keep_prob=self.input_keep_prob_p,
@@ -165,7 +168,8 @@ class Alignment():
                 initializer=tf.contrib.layers.xavier_initializer()
             )
             # logits:[batch_size*max_time, 2]
-            logits = tf.matmul(h, weight) + bias
+            #logits =tf.nn.elu(features=tf.matmul(h, weight) + bias)
+            logits= tf.matmul(h, weight) + bias
 
             # logits in an normal way:[batch_size,max_time_stpes,2]
             logits_normal = tf.reshape(
@@ -409,11 +413,11 @@ class Alignment():
                     )
 
                     # write the prob to files
-                    #util.writeProb(
-                    #    prob_pw=train_prob_pw_masked,
-                    #    prob_pph=train_prob_pph_masked,
-                    #    outFile="../result/alignment/alignment_prob_train_epoch" + str(epoch) + ".txt"
-                    #)
+                    util.writeProb(
+                        prob_pw=train_prob_pw_masked,
+                        prob_pph=train_prob_pph_masked,
+                        outFile="../result/alignment/alignment_prob_train_epoch" + str(epoch) + ".txt"
+                    )
 
                     lrs.append(lr)
                     # loss
@@ -455,12 +459,12 @@ class Alignment():
                         self.output_keep_prob_p: 1.0
                     }
                 )
-                # write the prob to files
-                #util.writeProb(
-                #    prob_pw=valid_prob_pw_masked,
-                #    prob_pph=valid_prob_pph_masked,
-                #    outFile="../result/alignment/alignment_prob_valid_epoch" + str(epoch) + ".txt"
-                #)
+                #write the prob to files
+                util.writeProb(
+                    prob_pw=valid_prob_pw_masked,
+                    prob_pph=valid_prob_pph_masked,
+                    outFile="../result/alignment/alignment_prob_valid_epoch" + str(epoch) + ".txt"
+                )
 
                 # metrics
                 self.valid_accuracy_pw, self.valid_f1_pw = util.eval(
@@ -473,12 +477,12 @@ class Alignment():
                 )
                 # recover to original corpus txt
                 # shape of valid_pred_pw,valid_pred_pw,valid_pred_pw:[corpus_size*time_stpes]
-                #util.recover2(
-                #    X=X_valid,
-                #    preds_pw=valid_pred_pw,
-                #    preds_pph=valid_pred_pph,
-                #    filename="../result/alignment/valid_recover_epoch_" + str(epoch) + ".txt"
-                #)
+                util.recover2(
+                    X=X_valid,
+                    preds_pw=valid_pred_pw,
+                    preds_pph=valid_pred_pph,
+                    filename="../result/alignment/valid_recover_epoch_" + str(epoch) + ".txt"
+                )
                 # ----------------------------------------------------------------------------------------
 
                 # ----------------------------------test in every epoch----------------------------------
@@ -503,11 +507,11 @@ class Alignment():
                     }
                 )
                 # write the prob to files
-                #util.writeProb(
-                #    prob_pw=test_prob_pw_masked,
-                #    prob_pph=test_prob_pph_masked,
-                #    outFile="../result/alignment/alignment_prob_test_epoch" + str(epoch) + ".txt"
-                #)
+                util.writeProb(
+                    prob_pw=test_prob_pw_masked,
+                    prob_pph=test_prob_pph_masked,
+                    outFile="../result/alignment/alignment_prob_test_epoch" + str(epoch) + ".txt"
+                )
 
                 # metrics
                 self.test_accuracy_pw, self.test_f1_pw = util.eval(
@@ -520,12 +524,12 @@ class Alignment():
                 )
                 # recover to original corpus txt
                 # shape of test_pred_pw,test_pred_pw,test_pred_pw:[corpus_size*time_stpes]
-                #util.recover2(
-                #    X=X_test,
-                #    preds_pw=test_pred_pw,
-                #    preds_pph=test_pred_pph,
-                #    filename="../result/alignment/test_recover_epoch_" + str(epoch) + ".txt"
-                #)
+                util.recover2(
+                    X=X_test,
+                    preds_pw=test_pred_pw,
+                    preds_pph=test_pred_pph,
+                    filename="../result/alignment/test_recover_epoch_" + str(epoch) + ".txt"
+                )
                 # -----------------------------------------------------------------------------------
 
                 # self.valid_accuracy_iph, self.valid_f1_1_iph, self.valid_f1_2_iph = util.eval(y_true=y_valid_iph_masked,y_pred=valid_pred_iph)
