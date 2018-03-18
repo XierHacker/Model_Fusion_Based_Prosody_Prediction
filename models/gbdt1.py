@@ -38,9 +38,6 @@ class GBDT1():
     def pred(self,X):
         pass
 
-
-
-
 #depadding and will reduce dimension
 def mask(length,X):
     list = []
@@ -83,13 +80,17 @@ if __name__=="__main__":
     X_valid_alignment = util.extractProb2(file="../result/alignment/alignment_prob_valid_epoch5.txt")
     X_valid_cnn = util.extractProb2(file="../result/cnn/cnn_prob_valid_epoch5.txt")
     X_valid_attention=util.extractProb2(file="../result/attention/attention_prob_valid_epoch4.txt")
+    X_valid_bilstm=util.extractProb2(file="../result/bilstm/bilstm_prob_valid_epoch3.txt")
 
     pos_valid = util.readExtraInfo(file="../data/dataset/pos_valid_tag.txt")
     pos_valid_masked = mask(length=len_valid, X=pos_valid)
     print(pos_valid_masked.shape)
     pos_valid_onehot = onehot(pos_valid_masked)
     print(pos_valid_onehot.shape)
-    X_valid = np.concatenate((X_valid_crf,X_valid_cnn, X_valid_alignment,X_valid_attention, pos_valid_onehot), axis=1)
+    X_valid = np.concatenate(
+        (X_valid_crf,X_valid_cnn, X_valid_alignment,X_valid_attention, X_valid_bilstm,pos_valid_onehot),
+        axis=1
+    )
 
     # test data
     df_test_pw = pd.read_pickle(path="../data/dataset/pw_summary_test.pkl")
@@ -98,15 +99,17 @@ if __name__=="__main__":
     X_test_alignment = util.extractProb2(file="../result/alignment/alignment_prob_test_epoch5.txt")
     X_test_cnn = util.extractProb2(file="../result/cnn/cnn_prob_test_epoch5.txt")
     X_test_attention = util.extractProb2(file="../result/attention/attention_prob_test_epoch4.txt")
+    X_test_bilstm=util.extractProb2(file="../result/bilstm/bilstm_prob_test_epoch3.txt")
 
     pos_test = util.readExtraInfo(file="../data/dataset/pos_test_tag.txt")
     pos_test_masked = mask(length=len_test, X=pos_test)
     print(pos_test_masked.shape)
     pos_test_onehot = onehot(pos_test_masked)
     print(pos_test_onehot.shape)
-    X_test = np.concatenate((X_test_crf,X_test_cnn, X_test_alignment, X_test_attention,pos_test_onehot), axis=1)
-
-
+    X_test = np.concatenate(
+        (X_test_crf,X_test_cnn, X_test_alignment, X_test_attention,X_test_bilstm,pos_test_onehot),
+        axis=1
+    )
 
     print("run model....")
     model=GBDT1()
