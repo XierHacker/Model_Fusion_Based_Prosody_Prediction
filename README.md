@@ -1,3 +1,5 @@
+**_Improving Prosodic Boundaries Prediction for Mandarin Speech Synthesis by Using Enhanced Embedding Feature and Model Fusion Approach_**
+
 ## **Requirements**
 >**python3.5+**
 
